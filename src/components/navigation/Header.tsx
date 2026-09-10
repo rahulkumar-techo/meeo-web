@@ -151,12 +151,7 @@ export const Header: React.FC = () => {
           >
             <div className="w-10 h-10 rounded-xl bg-[#eaedff] dark:bg-[#1e273d] border border-[#dae2fd] dark:border-[#28334d] flex items-center justify-center text-[#412ce7] dark:text-[#685aff] relative font-bold text-xs">
               {user ? (
-                user.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .substring(0, 2)
-                  .toUpperCase()
+                (`${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || 'M')
               ) : (
                 <User className="w-5 h-5" />
               )}

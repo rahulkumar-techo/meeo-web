@@ -20,11 +20,7 @@ import { Button } from '@/components/ui/Button';
 import { AuthVisualSide } from '@/features/auth/AuthVisualSide';
 import { SocialAuthButtons } from '@/features/auth/SocialAuthButtons';
 import { useToast } from '@/context/ToastContext';
-import {
-  useLoginMutation,
-  useSocialLoginMutation,
-  useSendOtpMutation,
-} from '@/hooks/useAuthMutations';
+import { useLoginMutation, useResendOtpMutation } from '@/hooks/useAuthMutations';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -42,11 +38,17 @@ function LoginFormContent() {
 
   // TanStack Query Mutations
   const loginMutation = useLoginMutation();
-  const socialLoginMutation = useSocialLoginMutation();
-  const sendOtpMutation = useSendOtpMutation();
+  const resendOtpMutation = useResendOtpMutation();
 
-  const isSubmitting =
-    loginMutation.isPending || socialLoginMutation.isPending || sendOtpMutation.isPending;
+  const isSubmitting = loginMutation.isPending || resendOtpMutation.isPending;
+
+  const handleSocialLogin = (provider: 'google' | 'apple' | 'passkey') => {
+    showToast(`${provider.toUpperCase()} single sign-on redirecting...`);
+    // Connect to backend OAuth route e.g. /api/v1/auth/google
+    if (typeof window !== 'undefined') {
+      window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://meeo-server.onrender.com/api/v1'}/auth/${provider}`;
+    }
+  };
 
   // Quick Demo Auto-fill Helper
   const handleAutoFillDemo = () => {
@@ -61,7 +63,7 @@ function LoginFormContent() {
     setErrorMsg('');
 
     if (!identifier.trim()) {
-      setErrorMsg('Please enter your email or phone number');
+      setErrorMsg('Please enter your email address');
       return;
     }
 
@@ -72,18 +74,24 @@ function LoginFormContent() {
 
     loginMutation.mutate(
       {
-        identifier: identifier.trim(),
+        email: identifier.trim(),
         password,
-        rememberMe,
       },
       {
-        onSuccess: (user) => {
-          showToast(`Welcome back, ${user.name}!`);
+        onSuccess: (res) => {
+          const userName = res.data?.user?.firstName || 'Collector';
+          showToast(`Welcome back, ${userName}!`);
           router.push(redirectPath);
         },
-        onError: (err) => {
-          setErrorMsg(err.message || 'Invalid credentials. Please try again.');
-          showToast(err.message, 'error');
+        onError: (err: any) => {
+          const apiMsg =
+            err.response?.data?.message ||
+            err.response?.data?.errors?.email ||
+            err.response?.data?.errors?.password ||
+            err.message ||
+            'Invalid credentials. Please try again.';
+          setErrorMsg(apiMsg);
+          showToast(apiMsg, 'error');
         },
       }
     );
@@ -94,14 +102,13 @@ function LoginFormContent() {
     setErrorMsg('');
 
     if (!identifier.trim()) {
-      setErrorMsg('Please enter your email or phone number to receive a one-time passcode');
+      setErrorMsg('Please enter your email address to receive a one-time passcode');
       return;
     }
 
-    sendOtpMutation.mutate(
+    resendOtpMutation.mutate(
       {
-        destination: identifier.trim(),
-        type: 'login',
+        email: identifier.trim(),
       },
       {
         onSuccess: (res) => {
@@ -112,24 +119,14 @@ function LoginFormContent() {
             )}`
           );
         },
-        onError: (err) => {
-          setErrorMsg(err.message || 'Could not dispatch OTP code. Try again.');
-          showToast(err.message, 'error');
+        onError: (err: any) => {
+          const apiMsg =
+            err.response?.data?.message || err.message || 'Could not dispatch OTP code. Try again.';
+          setErrorMsg(apiMsg);
+          showToast(apiMsg, 'error');
         },
       }
     );
-  };
-
-  const handleSocialLogin = (provider: 'google' | 'apple' | 'passkey') => {
-    socialLoginMutation.mutate(provider, {
-      onSuccess: (user) => {
-        showToast(`Signed in with ${provider.toUpperCase()}`);
-        router.push(redirectPath);
-      },
-      onError: (err) => {
-        showToast(err.message || 'Social sign-in failed', 'error');
-      },
-    });
   };
 
   return (

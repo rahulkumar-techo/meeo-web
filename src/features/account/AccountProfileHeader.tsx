@@ -18,16 +18,19 @@ export const AccountProfileHeader: React.FC = () => {
     router.push('/login');
   };
 
-  const displayName = user?.name || 'Milo Kapoor';
-  const displayEmail = user?.email || 'milo.kapoor@studio.meeo';
-  const displayPhone = user?.phone || '+91 98450 12345';
-  const displayPoints = user?.memberPoints ?? 1200;
+  const displayName = user
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email.split('@')[0]
+    : 'Guest Collector';
+  const displayEmail = user?.email || 'Sign in to access your Studio Portal';
+  const displayPhone = user?.phone || 'No phone registered';
+  const displayPoints = 1200;
   const initials = displayName
     .split(' ')
     .map((n) => n[0])
+    .filter(Boolean)
     .join('')
     .substring(0, 2)
-    .toUpperCase();
+    .toUpperCase() || 'M';
 
   return (
     <div className="bg-white dark:bg-[#131826] rounded-3xl p-6 sm:p-10 border border-[#e2e7ff] dark:border-[#28334d] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -39,7 +42,7 @@ export const AccountProfileHeader: React.FC = () => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#e2e7ff] dark:bg-[#1e273d] text-[#412ce7] dark:text-[#685aff] text-[10px] font-bold uppercase tracking-wider mb-1">
             <Sparkles className="w-3 h-3 text-[#fd6a49]" />
-            <span>Studio Tier · {user?.memberTier || 'Founding Member'}</span>
+            <span>Studio Tier · {user?.role ? user.role.toUpperCase() : 'Founding Member'}</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-[#131b2e] dark:text-white">
             {displayName}

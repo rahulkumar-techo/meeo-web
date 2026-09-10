@@ -7,13 +7,13 @@ import { Mail, Phone, ArrowLeft, ArrowRight, KeyRound, ShieldAlert, CheckCircle2
 import { MeeoLogo } from '@/components/ui/MeeoLogo';
 import { Button } from '@/components/ui/Button';
 import { AuthVisualSide } from '@/features/auth/AuthVisualSide';
-import { useSendOtpMutation } from '@/hooks/useAuthMutations';
+import { useForgotPasswordMutation } from '@/hooks/useAuthMutations';
 import { useToast } from '@/context/ToastContext';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { showToast } = useToast();
-  const sendOtpMutation = useSendOtpMutation();
+  const forgotPasswordMutation = useForgotPasswordMutation();
 
   const [destination, setDestination] = useState<string>('');
   const [method, setMethod] = useState<'otp' | 'email_link'>('otp');
@@ -21,22 +21,21 @@ export default function ForgotPasswordPage() {
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isSuccessLinkSent, setIsSuccessLinkSent] = useState<boolean>(false);
 
-  const isSubmitting = sendOtpMutation.isPending || isMagicLinkPending;
+  const isSubmitting = forgotPasswordMutation.isPending || isMagicLinkPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!destination.trim()) {
-      setErrorMsg('Please provide your registered email or phone number');
+      setErrorMsg('Please provide your registered email address');
       return;
     }
 
     if (method === 'otp') {
-      sendOtpMutation.mutate(
+      forgotPasswordMutation.mutate(
         {
-          destination: destination.trim(),
-          type: 'forgot_password',
+          email: destination.trim(),
         },
         {
           onSuccess: (res) => {
@@ -45,19 +44,41 @@ export default function ForgotPasswordPage() {
               `/verify-otp?mode=forgot_password&dest=${encodeURIComponent(destination.trim())}`
             );
           },
-          onError: (err) => {
-            setErrorMsg(err.message || 'Could not process request. Please try again.');
-            showToast(err.message, 'error');
+          onError: (err: any) => {
+            const apiMsg =
+              err.response?.data?.message ||
+              err.response?.data?.errors?.email ||
+              err.message ||
+              'Could not process request. Please try again.';
+            setErrorMsg(apiMsg);
+            showToast(apiMsg, 'error');
           },
         }
       );
     } else {
       setIsMagicLinkPending(true);
-      setTimeout(() => {
-        setIsMagicLinkPending(false);
-        setIsSuccessLinkSent(true);
-        showToast('Recovery link sent to your email inbox');
-      }, 800);
+      forgotPasswordMutation.mutate(
+        {
+          email: destination.trim(),
+        },
+        {
+          onSuccess: () => {
+            setIsMagicLinkPending(false);
+            setIsSuccessLinkSent(true);
+            showToast('Recovery code sent to your email inbox');
+          },
+          onError: (err: any) => {
+            setIsMagicLinkPending(false);
+            const apiMsg =
+              err.response?.data?.message ||
+              err.response?.data?.errors?.email ||
+              err.message ||
+              'Failed to dispatch recovery email.';
+            setErrorMsg(apiMsg);
+            showToast(apiMsg, 'error');
+          },
+        }
+      );
     }
   };
 

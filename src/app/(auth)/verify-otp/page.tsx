@@ -21,7 +21,6 @@ import { ResendOtpTimer } from '@/features/auth/ResendOtpTimer';
 import {
   useVerifyOtpMutation,
   useResendOtpMutation,
-  useSendOtpMutation,
 } from '@/hooks/useAuthMutations';
 import { useToast } from '@/context/ToastContext';
 
@@ -37,7 +36,6 @@ function VerifyOtpContent() {
 
   const verifyOtpMutation = useVerifyOtpMutation();
   const resendOtpMutation = useResendOtpMutation();
-  const sendOtpMutation = useSendOtpMutation();
 
   const [destination, setDestination] = useState<string>(initialDest);
   const [isEditingDest, setIsEditingDest] = useState<boolean>(false);
@@ -73,9 +71,8 @@ function VerifyOtpContent() {
 
     verifyOtpMutation.mutate(
       {
-        destination,
+        email: destination,
         otp: code,
-        type: mode as 'login' | 'register' | 'forgot_password' | 'phone_verify',
       },
       {
         onSuccess: () => {
@@ -84,29 +81,35 @@ function VerifyOtpContent() {
             router.push(
               `/reset-password?dest=${encodeURIComponent(destination)}&otp=${encodeURIComponent(code)}`
             );
+          } else if (mode === 'register') {
+            showToast('Account verified! Please sign in to proceed.');
+            router.push('/login');
           } else {
             router.push(redirectPath);
           }
         },
-        onError: (err) => {
-          setErrorMsg(err.message || 'Invalid verification code. Please check and retry.');
-          showToast(err.message, 'error');
+        onError: (err: any) => {
+          const apiMsg =
+            err.response?.data?.message ||
+            err.response?.data?.errors?.otp ||
+            err.message ||
+            'Invalid verification code. Please check and retry.';
+          setErrorMsg(apiMsg);
+          showToast(apiMsg, 'error');
         },
       }
     );
   };
 
-  const handleResend = async (channel: 'sms' | 'whatsapp' | 'email') => {
+  const handleResend = async () => {
     try {
       const res = await resendOtpMutation.mutateAsync({
-        destination,
-        type: mode as 'login' | 'register' | 'forgot_password' | 'phone_verify',
-        channel,
+        email: destination,
       });
-      showToast(res.message);
+      showToast(res.message || 'Verification code resent successfully!');
       setErrorMsg('');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to resend code';
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to resend code';
       showToast(msg, 'error');
     }
   };
@@ -117,10 +120,9 @@ function VerifyOtpContent() {
     setDestination(editedDest.trim());
     setIsEditingDest(false);
 
-    sendOtpMutation.mutate(
+    resendOtpMutation.mutate(
       {
-        destination: editedDest.trim(),
-        type: mode as 'login' | 'register' | 'forgot_password' | 'phone_verify',
+        email: editedDest.trim(),
       },
       {
         onSuccess: () => {

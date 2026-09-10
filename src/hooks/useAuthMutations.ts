@@ -1,93 +1,88 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  authService,
+import { authService } from '@/services/auth/authService';
+import type {
   AuthUser,
-  LoginCredentials,
+  LoginPayload,
   RegisterPayload,
-  OtpRequest,
-  OtpVerifyPayload,
+  VerifyOtpPayload,
+  ResendOtpPayload,
+  ForgotPasswordPayload,
   ResetPasswordPayload,
-} from '@/services/auth/authService';
+  ApiResponse,
+  AuthResponseData,
+} from '@/services/auth/auth.type';
+import { useUserStore } from '@/store/user.store';
 
 export const AUTH_KEYS = {
   all: ['auth'] as const,
   user: () => [...AUTH_KEYS.all, 'user'] as const,
-  session: () => [...AUTH_KEYS.all, 'session'] as const,
+  me: () => [...AUTH_KEYS.all, 'me'] as const,
 };
 
 /**
- * Query hook for current authenticated user profile
+ * Query hook for current authenticated user profile (/auth/me)
  */
 export function useCurrentUserQuery() {
+  const storeUser = useUserStore((s) => s.user);
+  const isAuthenticated = useUserStore((s) => s.isAuthenticated);
+  const setUser = useUserStore((s) => s.setUser);
+
   return useQuery<AuthUser | null>({
-    queryKey: AUTH_KEYS.user(),
-    queryFn: () => authService.getCurrentUser(),
-    staleTime: Infinity,
+    queryKey: AUTH_KEYS.me(),
+    queryFn: async () => {
+      try {
+        const res = await authService.getMe();
+        if (res.success && res.data) {
+          setUser(res.data);
+          return res.data;
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: isAuthenticated,
+    initialData: storeUser,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
 /**
- * Mutation hook for standard email/phone & password login
+ * Mutation hook for email & password login
  */
 export function useLoginMutation() {
   const queryClient = useQueryClient();
+  const setAuth = useUserStore((s) => s.setAuth);
 
-  return useMutation<AuthUser, Error, LoginCredentials>({
-    mutationFn: (credentials) => authService.loginWithPassword(credentials),
-    onSuccess: (user) => {
-      queryClient.setQueryData(AUTH_KEYS.user(), user);
-      queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
+  return useMutation<ApiResponse<AuthResponseData>, Error, LoginPayload>({
+    mutationFn: async (payload) => {
+      return await authService.login(payload);
+    },
+    onSuccess: (res) => {
+      if (res.data?.user && res.data?.accessToken) {
+        setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
+        queryClient.setQueryData(AUTH_KEYS.me(), res.data.user);
+        queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
+      }
     },
   });
 }
 
 /**
- * Mutation hook for Google, Apple, and Passkey logins
- */
-export function useSocialLoginMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation<AuthUser, Error, 'google' | 'apple' | 'passkey'>({
-    mutationFn: (provider) => authService.loginWithSocial(provider),
-    onSuccess: (user) => {
-      queryClient.setQueryData(AUTH_KEYS.user(), user);
-      queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
-    },
-  });
-}
-
-/**
- * Mutation hook for registering a new collector account
+ * Mutation hook for registering a new account
  */
 export function useRegisterMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<AuthUser, Error, RegisterPayload>({
-    mutationFn: (payload) => authService.register(payload),
-    onSuccess: (user) => {
-      queryClient.setQueryData(AUTH_KEYS.user(), user);
+  return useMutation<ApiResponse<{ user: AuthUser }>, Error, RegisterPayload>({
+    mutationFn: async (payload) => {
+      return await authService.register(payload);
+    },
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
     },
-  });
-}
-
-/**
- * Mutation hook for initiating OTP delivery (Login, Register, Forgot Password)
- */
-export function useSendOtpMutation() {
-  return useMutation<{ success: boolean; message: string; expirySeconds: number }, Error, OtpRequest>({
-    mutationFn: (req) => authService.sendOtp(req),
-  });
-}
-
-/**
- * Mutation hook for resending OTP with multi-channel options
- */
-export function useResendOtpMutation() {
-  return useMutation<{ success: boolean; message: string; expirySeconds: number }, Error, OtpRequest>({
-    mutationFn: (req) => authService.resendOtp(req),
   });
 }
 
@@ -97,23 +92,46 @@ export function useResendOtpMutation() {
 export function useVerifyOtpMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<AuthUser | { verified: boolean }, Error, OtpVerifyPayload>({
-    mutationFn: (payload) => authService.verifyOtp(payload),
-    onSuccess: (result) => {
-      if ('id' in result) {
-        queryClient.setQueryData(AUTH_KEYS.user(), result);
-        queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
-      }
+  return useMutation<ApiResponse<null>, Error, VerifyOtpPayload>({
+    mutationFn: async (payload) => {
+      return await authService.verifyOtp(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
     },
   });
 }
 
 /**
- * Mutation hook for resetting password
+ * Mutation hook for resending OTP
+ */
+export function useResendOtpMutation() {
+  return useMutation<ApiResponse<null>, Error, ResendOtpPayload>({
+    mutationFn: async (payload) => {
+      return await authService.resendOtp(payload);
+    },
+  });
+}
+
+/**
+ * Mutation hook for initiating forgot password OTP
+ */
+export function useForgotPasswordMutation() {
+  return useMutation<ApiResponse<null>, Error, ForgotPasswordPayload>({
+    mutationFn: async (payload) => {
+      return await authService.forgotPassword(payload);
+    },
+  });
+}
+
+/**
+ * Mutation hook for resetting password with OTP
  */
 export function useResetPasswordMutation() {
-  return useMutation<{ success: boolean; message: string }, Error, ResetPasswordPayload>({
-    mutationFn: (payload) => authService.resetPassword(payload),
+  return useMutation<ApiResponse<null>, Error, ResetPasswordPayload>({
+    mutationFn: async (payload) => {
+      return await authService.resetPassword(payload);
+    },
   });
 }
 
@@ -122,14 +140,17 @@ export function useResetPasswordMutation() {
  */
 export function useLogoutMutation() {
   const queryClient = useQueryClient();
+  const logout = useUserStore((s) => s.logout);
 
-  return useMutation<void, Error, void>({
+  return useMutation<ApiResponse<null>, Error, void>({
     mutationFn: async () => {
-      authService.clearSession();
+      return await authService.logout();
     },
-    onSuccess: () => {
-      queryClient.setQueryData(AUTH_KEYS.user(), null);
+    onSettled: () => {
+      logout();
+      queryClient.setQueryData(AUTH_KEYS.me(), null);
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
     },
   });
 }
+

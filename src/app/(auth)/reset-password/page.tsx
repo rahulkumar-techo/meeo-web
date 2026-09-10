@@ -43,18 +43,24 @@ function ResetPasswordContent() {
 
     resetPasswordMutation.mutate(
       {
-        destination,
+        email: destination,
         otp,
-        newPassword: password,
+        password,
       },
       {
         onSuccess: () => {
           setIsSuccess(true);
           showToast('Security password successfully updated!');
         },
-        onError: (err) => {
-          setErrorMsg(err.message || 'Failed to update password. Please try again.');
-          showToast(err.message, 'error');
+        onError: (err: any) => {
+          const apiMsg =
+            err.response?.data?.message ||
+            err.response?.data?.errors?.password ||
+            err.response?.data?.errors?.otp ||
+            err.message ||
+            'Failed to update password. Please try again.';
+          setErrorMsg(apiMsg);
+          showToast(apiMsg, 'error');
         },
       }
     );

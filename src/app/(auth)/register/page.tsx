@@ -21,51 +21,35 @@ import { AuthVisualSide } from '@/features/auth/AuthVisualSide';
 import { SocialAuthButtons } from '@/features/auth/SocialAuthButtons';
 import { PasswordStrengthMeter } from '@/features/auth/PasswordStrengthMeter';
 import { useToast } from '@/context/ToastContext';
-import { useRegisterMutation, useSocialLoginMutation } from '@/hooks/useAuthMutations';
+import { useRegisterMutation } from '@/hooks/useAuthMutations';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { showToast } = useToast();
 
   const registerMutation = useRegisterMutation();
-  const socialLoginMutation = useSocialLoginMutation();
 
-  const [name, setName] = useState<string>('');
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([
-    'Workspace Tech',
-    'Audio & Sound',
-  ]);
   const [agreeTerms, setAgreeTerms] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  const isSubmitting = registerMutation.isPending || socialLoginMutation.isPending;
-
-  const interestOptions = [
-    'Workspace Tech',
-    'Footwear & Kicks',
-    'Audio & Sound',
-    'Living & Objects',
-    'Curated Drops',
-  ];
-
-  const toggleInterest = (interest: string) => {
-    if (selectedInterests.includes(interest)) {
-      setSelectedInterests(selectedInterests.filter((i) => i !== interest));
-    } else {
-      setSelectedInterests([...selectedInterests, interest]);
-    }
-  };
+  const isSubmitting = registerMutation.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!name.trim()) {
-      setErrorMsg('Please enter your full name');
+    if (!firstName.trim()) {
+      setErrorMsg('Please enter your first name');
+      return;
+    }
+
+    if (!lastName.trim()) {
+      setErrorMsg('Please enter your last name');
       return;
     }
 
@@ -86,37 +70,37 @@ export default function RegisterPage() {
 
     registerMutation.mutate(
       {
-        name: name.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         email: email.trim(),
-        phone: phone.trim(),
         password,
-        interests: selectedInterests,
       },
       {
-        onSuccess: (user) => {
-          showToast(`Welcome to the Meeo Collective, ${user.name}!`);
+        onSuccess: () => {
+          showToast(`Account created! A verification OTP has been dispatched to ${email.trim()}`);
           router.push(
             `/verify-otp?mode=register&dest=${encodeURIComponent(email.trim())}&redirect=/account`
           );
         },
-        onError: (err) => {
-          setErrorMsg(err.message || 'Registration failed. Please try again.');
-          showToast(err.message, 'error');
+        onError: (err: any) => {
+          const apiMsg =
+            err.response?.data?.message ||
+            err.response?.data?.errors?.email ||
+            err.response?.data?.errors?.password ||
+            err.message ||
+            'Registration failed. Please try again.';
+          setErrorMsg(apiMsg);
+          showToast(apiMsg, 'error');
         },
       }
     );
   };
 
   const handleSocialAuth = (provider: 'google' | 'apple' | 'passkey') => {
-    socialLoginMutation.mutate(provider, {
-      onSuccess: (user) => {
-        showToast(`Welcome to Meeo, ${user.name}!`);
-        router.push('/account');
-      },
-      onError: (err) => {
-        showToast(err.message || 'Social registration failed', 'error');
-      },
-    });
+    showToast(`${provider.toUpperCase()} single sign-on redirecting...`);
+    if (typeof window !== 'undefined') {
+      window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://meeo-server.onrender.com/api/v1'}/auth/${provider}`;
+    }
   };
 
   return (
@@ -161,23 +145,44 @@ export default function RegisterPage() {
 
           {/* Registration Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {/* Full Name */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
-                  <User className="w-4 h-4" />
+            {/* First & Last Name row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
+                  First Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Milo"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
+                  />
                 </div>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Milo Kapoor"
-                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
-                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
+                  Last Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Kapoor"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
+                  />
+                </div>
               </div>
             </div>
 
@@ -196,25 +201,6 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="milo.kapoor@studio.meeo"
-                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
-                />
-              </div>
-            </div>
-
-            {/* Mobile Phone Number */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
-                Mobile Phone <span className="text-[11px] font-normal text-[#777588]">(For SMS &amp; Dispatch Tracking)</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98450 12345"
                   className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
                 />
               </div>
@@ -249,32 +235,6 @@ export default function RegisterPage() {
 
               {/* Live Strength Feedback */}
               <PasswordStrengthMeter password={password} />
-            </div>
-
-            {/* Curation Preferences Tags */}
-            <div className="flex flex-col gap-2 pt-1">
-              <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
-                Primary Interests <span className="text-[11px] font-normal text-[#777588]">(For customized drop alerts)</span>
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {interestOptions.map((opt) => {
-                  const isSelected = selectedInterests.includes(opt);
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => toggleInterest(opt)}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#412ce7] text-white shadow-2xs'
-                          : 'bg-[#f2f3ff] dark:bg-[#182032] text-[#464556] dark:text-[#a6abbf] hover:bg-[#eaedff]'
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
 
             {/* Terms Agreement Checkbox */}

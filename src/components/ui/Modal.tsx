@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -9,12 +9,13 @@ import CloseIcon from '@mui/icons-material/Close';
 
 /**
  * Meeo Unified Modal / Dialog Component
- * Built on Material UI Dialog with backdrop blur, smooth spring transitions, and brand styling.
+ * Built on Material UI Dialog with backdrop blur, responsive full-screen support, and strict background scroll lock.
  *
  * @param isOpen - Open state boolean
  * @param onClose - Triggered upon backdrop click or escape key
  * @param title - Modal title string
- * @param maxWidth - Scale constraint ('xs' | 'sm' | 'md' | 'lg' | 'xl')
+ * @param maxWidth - Scale constraint ('xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl')
+ * @param fullScreenOnMobile - If true, takes 100% viewport on mobile devices (<640px)
  */
 interface ModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ interface ModalProps {
   children: React.ReactNode;
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   position?: 'center' | 'top';
+  fullScreenOnMobile?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -32,8 +34,16 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   maxWidth = 'md',
   position = 'center',
+  fullScreenOnMobile = false,
 }) => {
   const muiMaxWidth = maxWidth === '2xl' ? 'lg' : maxWidth;
+
+  // Ensure documentElement never retains stale overflow locks when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      document.documentElement.style.overflow = '';
+    }
+  }, [isOpen]);
 
   return (
     <Dialog
@@ -41,30 +51,38 @@ export const Modal: React.FC<ModalProps> = ({
       onClose={onClose}
       fullWidth
       maxWidth={muiMaxWidth}
-      transitionDuration={240}
-      disableScrollLock={true}
+      transitionDuration={200}
+      disableScrollLock={false}
       sx={{
         ...(position === 'top' && {
           '& .MuiDialog-container': {
-            alignItems: 'flex-start',
-            pt: { xs: 2, sm: 6, md: 8 },
+            alignItems: { xs: fullScreenOnMobile ? 'stretch' : 'flex-start', sm: 'flex-start' },
+            pt: { xs: fullScreenOnMobile ? 0 : 2, sm: 6, md: 8 },
           },
         }),
       }}
       slotProps={{
         paper: {
           sx: {
-            borderRadius: '1.5rem',
+            borderRadius: { xs: fullScreenOnMobile ? 0 : '1.5rem', sm: '1.5rem' },
             backgroundColor: 'background.paper',
             color: 'text.primary',
             backgroundImage: 'none',
             boxShadow: '0 24px 48px rgba(0, 0, 0, 0.35)',
-            border: '1px solid',
+            border: { xs: fullScreenOnMobile ? 'none' : '1px solid', sm: '1px solid' },
             borderColor: 'divider',
             overflow: 'hidden',
+            overscrollBehavior: 'contain',
             p: 0,
-            ...(position === 'top' && {
-              m: { xs: 1.5, sm: 2 },
+            m: {
+              xs: fullScreenOnMobile ? 0 : 1.5,
+              sm: position === 'top' ? 2 : 'auto',
+            },
+            ...(fullScreenOnMobile && {
+              width: { xs: '100vw', sm: 'auto' },
+              minHeight: { xs: '100vh', sm: 'auto' },
+              height: { xs: '100%', sm: 'auto' },
+              maxHeight: { xs: '100vh', sm: 'calc(100% - 64px)' },
             }),
           },
         },
@@ -72,6 +90,7 @@ export const Modal: React.FC<ModalProps> = ({
           sx: {
             backdropFilter: 'blur(6px)',
             backgroundColor: 'rgba(0, 0, 0, 0.55)',
+            touchAction: 'none',
           },
         },
       }}
@@ -82,8 +101,8 @@ export const Modal: React.FC<ModalProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            px: 3.5,
-            py: 2.5,
+            px: { xs: 2.5, sm: 3.5 },
+            py: { xs: 2, sm: 2.5 },
             borderBottom: '1px solid',
             borderColor: 'divider',
             fontFamily: 'var(--font-plus-jakarta), sans-serif',
@@ -107,7 +126,17 @@ export const Modal: React.FC<ModalProps> = ({
         </DialogTitle>
       )}
 
-      <DialogContent sx={{ p: 3.5, fontFamily: 'var(--font-plus-jakarta), sans-serif' }}>
+      <DialogContent
+        sx={{
+          p: { xs: 2.5, sm: 3.5 },
+          fontFamily: 'var(--font-plus-jakarta), sans-serif',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          touchAction: 'pan-y',
+        }}
+      >
         {children}
       </DialogContent>
     </Dialog>

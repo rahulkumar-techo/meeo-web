@@ -14,6 +14,7 @@ import { useSearchFilter } from '@/context/SearchFilterContext';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
 import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/context/AuthContext';
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
@@ -24,6 +25,7 @@ export const Header: React.FC = () => {
   const { isVisible } = useScrollDirection();
   const { theme, resolvedTheme, toggleTheme } = useTheme();
   const { showToast } = useToast();
+  const { user, isAuthenticated } = useAuth();
 
   const handleToggleTheme = () => {
     toggleTheme();
@@ -141,15 +143,24 @@ export const Header: React.FC = () => {
             </span>
           </button>
 
-          {/* Account Profile Pill (Hidden on mobile where bottom nav provides it) */}
+          {/* Account Profile Pill */}
           <Link
-            href="/account"
+            href={isAuthenticated ? '/account' : '/login'}
             className="hidden sm:flex items-center gap-2 pl-1 rounded-full hover:opacity-90 transition-opacity shrink-0"
-            aria-label="Account Dashboard"
+            aria-label={isAuthenticated ? 'Account Dashboard' : 'Sign In'}
           >
-            <div className="w-10 h-10 rounded-xl bg-[#eaedff] border border-[#dae2fd] flex items-center justify-center text-[#412ce7] relative">
-              <User className="w-5 h-5" />
-              <span className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-[#fd6a49]" />
+            <div className="w-10 h-10 rounded-xl bg-[#eaedff] dark:bg-[#1e273d] border border-[#dae2fd] dark:border-[#28334d] flex items-center justify-center text-[#412ce7] dark:text-[#685aff] relative font-bold text-xs">
+              {user ? (
+                user.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .substring(0, 2)
+                  .toUpperCase()
+              ) : (
+                <User className="w-5 h-5" />
+              )}
+              <span className={`absolute bottom-1 right-1 w-2 h-2 rounded-full ${isAuthenticated ? 'bg-emerald-500' : 'bg-[#fd6a49]'}`} />
             </div>
           </Link>
         </div>

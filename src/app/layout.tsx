@@ -8,6 +8,8 @@ import { WishlistProvider } from '@/context/WishlistContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { SearchFilterProvider } from '@/context/SearchFilterContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { QueryProvider } from '@/context/QueryProvider';
+import { AuthProvider } from '@/context/AuthContext';
 import { Header } from '@/components/navigation/Header';
 import { MobileNav } from '@/components/navigation/MobileNav';
 import { QuickSearchModal } from '@/components/navigation/QuickSearchModal';
@@ -146,29 +148,33 @@ export default function RootLayout({
         <ThemeProvider>
           <MuiThemeRegistry>
             <ToastProvider>
-              <CartProvider>
-                <WishlistProvider>
-                  <NotificationProvider>
-                    <SearchFilterProvider>
-                      {/* Global Fixed Navigation Header */}
-                      <Header />
+              <QueryProvider>
+                <AuthProvider>
+                  <CartProvider>
+                    <WishlistProvider>
+                      <NotificationProvider>
+                        <SearchFilterProvider>
+                          {/* Global Fixed Navigation Header */}
+                          <Header />
 
-                      {/* Main Viewport Container */}
-                      <main className="flex-1 w-full pt-[108px] pb-20 md:pb-0 overflow-x-hidden">
-                        {children}
-                      </main>
+                          {/* Main Viewport Container */}
+                          <main className="flex-1 w-full pt-[108px] pb-20 md:pb-0 overflow-x-hidden">
+                            {children}
+                          </main>
 
-                      {/* Global Footer */}
-                      <Footer />
+                          {/* Global Footer */}
+                          <Footer />
 
-                      {/* Overlays & Drawers */}
-                      <QuickSearchModal />
-                      <CartDrawer />
-                      <MobileNav />
-                    </SearchFilterProvider>
-                  </NotificationProvider>
-                </WishlistProvider>
-              </CartProvider>
+                          {/* Overlays & Drawers */}
+                          <QuickSearchModal />
+                          <CartDrawer />
+                          <MobileNav />
+                        </SearchFilterProvider>
+                      </NotificationProvider>
+                    </WishlistProvider>
+                  </CartProvider>
+                </AuthProvider>
+              </QueryProvider>
             </ToastProvider>
           </MuiThemeRegistry>
         </ThemeProvider>

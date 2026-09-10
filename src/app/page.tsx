@@ -1,61 +1,60 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { HeroSection } from '@/features/home/HeroSection';
-import { DiscoveryDock } from '@/features/home/DiscoveryDock';
-import { BentoCollections } from '@/features/home/BentoCollections';
-import { CuratorSpotlight } from '@/features/home/CuratorSpotlight';
-import { DropsTeaser } from '@/features/home/DropsTeaser';
-import { ProductCard } from '@/components/ui/ProductCard';
+import React from 'react';
+import { TopCategoryBar } from '@/features/home/TopCategoryBar';
+import { HeroDealsBanner } from '@/features/home/HeroDealsBanner';
+import { BankOfferStrip } from '@/features/home/BankOfferStrip';
+import { DealsOfTheDay } from '@/features/home/DealsOfTheDay';
+import { CategoryProductRail } from '@/features/home/CategoryProductRail';
+import { InfiniteProductGrid } from '@/features/home/InfiniteProductGrid';
 import { MOCK_PRODUCTS } from '@/data/products';
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState('trending');
-
-  const displayedProducts = useMemo(() => {
-    if (activeTab === 'trending') {
-      return MOCK_PRODUCTS.filter((p) => p.badgeType === 'trending' || p.badgeType === 'drop' || p.rating >= 4.9);
-    }
-    if (activeTab === 'new') {
-      return [...MOCK_PRODUCTS].reverse();
-    }
-    if (activeTab === 'best_sellers') {
-      return [...MOCK_PRODUCTS].sort((a, b) => b.reviewCount - a.reviewCount);
-    }
-    if (activeTab === 'curated_deals') {
-      return MOCK_PRODUCTS.filter((p) => p.originalPrice && p.originalPrice > p.price);
-    }
-    if (activeTab === 'archival') {
-      return MOCK_PRODUCTS.filter((p) => p.isArchivalDrop);
-    }
-    return MOCK_PRODUCTS;
-  }, [activeTab]);
+  const workspaceProducts = MOCK_PRODUCTS.filter((p) => p.category === 'workspace');
+  const footwearProducts = MOCK_PRODUCTS.filter((p) => p.category === 'footwear');
+  const budgetProducts = MOCK_PRODUCTS.filter((p) => p.price <= 5000);
 
   return (
-    <div className="flex flex-col w-full">
-      {/* 1. Editorial Hero Discovery Experience */}
-      <HeroSection />
+    <div className="flex flex-col w-full pb-16">
+   
+     {/* 2. Main Hero Deals & Offer Banner Carousel */}
+      <HeroDealsBanner />
 
-      {/* 2. Quick Discovery Filter Bar (Sticky Pill Dock) */}
-      <DiscoveryDock activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* 3. Bank Offer & Trust Guarantee Strip */}
+      {/* <BankOfferStrip /> */}
 
-      {/* 3. Featured Dynamic Product Grid from Active Tab */}
-      <section className="w-full max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6">
-          {displayedProducts.slice(0, 4).map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
+      {/* 4. Deals of the Day with Live Countdown Timer */}
+      <DealsOfTheDay products={MOCK_PRODUCTS} />
 
-      {/* 4. Editorial Asymmetric Bento Grid Collections */}
-      <BentoCollections products={MOCK_PRODUCTS} />
+      {/* 5. Best of Workspace & Tech Product Rail */}
+      <CategoryProductRail
+        title="Best of Workspace & Precision Tech"
+        subtitle="Mechanical keyboards, fast magnetic docks, monitor lights & deskmats"
+        viewAllHref="/category?cat=workspace"
+        badge="From ₹1,899"
+        products={workspaceProducts}
+      />
 
-      {/* 5. Limited Edition Archival Drops Countdown */}
-      <DropsTeaser />
+      {/* 6. Trending Footwear & Streetwear Product Rail */}
+      <CategoryProductRail
+        title="Trending Footwear & Craft Kicks"
+        subtitle="Full-grain Italian nappa leather, supercritical runners & Goodyear derbys"
+        viewAllHref="/category?cat=footwear"
+        badge="Min 30% Off"
+        products={footwearProducts}
+      />
 
-      {/* 6. Curator Spotlight & Brand Philosophy */}
-      <CuratorSpotlight />
+      {/* 7. Budget Finds Under ₹4,999 */}
+      <CategoryProductRail
+        title="Top Rated Deals Under ₹4,999"
+        subtitle="Everyday essentials, charging hubs, ceramic vessels & titanium EDC"
+        viewAllHref="/category"
+        badge="Budget Steals"
+        products={budgetProducts}
+      />
+
+      {/* 8. Full Recommended / Product Discovery Grid with Filters & Sort */}
+      <InfiniteProductGrid products={MOCK_PRODUCTS} />
     </div>
   );
 }

@@ -74,12 +74,6 @@ apiClient.interceptors.request.use(
       config.headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Attach guest session ID if present
-    const guestSessionId = getStoredSessionId();
-    if (guestSessionId && config.headers && !config.headers["x-session-id"]) {
-      config.headers["x-session-id"] = guestSessionId;
-    }
-
     // Attach CSRF token for mutating requests if available
     const csrfToken = getStoredCsrfToken();
     if (csrfToken && config.headers && !config.headers["X-CSRF-Token"]) {

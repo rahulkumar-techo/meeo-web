@@ -6,13 +6,13 @@ import { CategoryHero } from '@/features/catalog/CategoryHero';
 import { FilterSidebar } from '@/features/catalog/FilterSidebar';
 import { ActiveFilterBar } from '@/features/catalog/ActiveFilterBar';
 import { CatalogGrid } from '@/features/catalog/CatalogGrid';
-import { CATEGORIES } from '@/data/categories';
-import { MOCK_PRODUCTS } from '@/data/products';
 import { FilterState } from '@/types/filter';
-
 import { Drawer } from '@/components/ui/Drawer';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { generateBreadcrumbSchema } from '@/config/seo';
+import { useCategoriesQuery, useProductsQuery } from '@/hooks/catalog/useCatalog';
+import { extractArray, normalizeProducts } from '@/lib/apiHelper';
+import type { Product } from '@/types/product';
 
 function CatalogContent() {
   const searchParams = useSearchParams();
@@ -35,6 +35,18 @@ function CatalogContent() {
 
   const [isDemoEmpty, setIsDemoEmpty] = useState(false);
 
+  const { data: categoriesData } = useCategoriesQuery();
+  const categories = extractArray(categoriesData);
+
+  const { data: productsData } = useProductsQuery({
+    categorySlug: filters.category !== 'all' ? filters.category : undefined,
+    minPrice: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
+    maxPrice: filters.priceRange[1] < 30000 ? filters.priceRange[1] : undefined,
+    inStock: filters.inStockOnly ? true : undefined,
+  });
+
+  const rawProducts = normalizeProducts(productsData);
+
   useEffect(() => {
     const cat = searchParams.get('cat');
     if (cat) {
@@ -43,52 +55,41 @@ function CatalogContent() {
   }, [searchParams]);
 
   const currentCategory = useMemo(() => {
-    return CATEGORIES.find((c) => c.slug === filters.category) || CATEGORIES[0];
-  }, [filters.category]);
+    const found = categories.find((c: any) => c.slug === filters.category);
+    if (found) {
+      return {
+        id: found.id || found.slug,
+        slug: found.slug,
+        name: found.name,
+        description: found.description || 'Curated design hardware and living objects.',
+        subcategories: [],
+      };
+    }
+    return {
+      id: 'all',
+      slug: 'all',
+      name: 'Full Catalog',
+      description: 'Tactile stoneware, ambient luminescent lamps, and sculptural objects for focused rituals.',
+      subcategories: [],
+    };
+  }, [categories, filters.category]);
 
   const filteredProducts = useMemo(() => {
     if (isDemoEmpty) return [];
 
-    return MOCK_PRODUCTS.filter((product) => {
-      // Category filter
-      if (filters.category !== 'all' && product.category !== filters.category) {
-        return false;
-      }
-      // Price Range filter
-      if (product.price > filters.priceRange[1]) {
-        return false;
-      }
-      // In Stock filter
-      if (filters.inStockOnly && !product.inStock) {
-        return false;
-      }
+    return rawProducts.filter((product) => {
       // On Sale filter
       if (filters.onSaleOnly && (!product.originalPrice || product.originalPrice <= product.price)) {
         return false;
       }
-      // Materials filter
-      if (
-        filters.materials.length > 0 &&
-        !product.materials?.some((m) => filters.materials.includes(m))
-      ) {
-        return false;
-      }
-      // Sizes filter
-      if (
-        filters.sizes.length > 0 &&
-        !product.sizes?.some((s) => filters.sizes.includes(s.size))
-      ) {
-        return false;
-      }
       return true;
     }).sort((a, b) => {
-      if (filters.sortBy === 'price_asc') return a.price - b.price;
-      if (filters.sortBy === 'price_desc') return b.price - a.price;
-      if (filters.sortBy === 'rating_desc') return b.rating - a.rating;
-      if (filters.sortBy === 'newest') return b.id.localeCompare(a.id);
-      return 0; // Curated
+      if (filters.sortBy === 'price_asc') return (a.price || 0) - (b.price || 0);
+      if (filters.sortBy === 'price_desc') return (b.price || 0) - (a.price || 0);
+      if (filters.sortBy === 'rating_desc') return (b.rating || 0) - (a.rating || 0);
+      return 0;
     });
-  }, [filters, isDemoEmpty]);
+  }, [rawProducts, filters, isDemoEmpty]);
 
   const handleFilterChange = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -129,7 +130,6 @@ function CatalogContent() {
           { name: currentCategory.name, url: `/category?cat=${currentCategory.slug}` },
         ])}
       />
-      {/* 1. Category Hero & Breadcrumbs */}
       <CategoryHero
         category={currentCategory}
         subCategory={filters.subCategory || 'All'}
@@ -137,10 +137,8 @@ function CatalogContent() {
         totalResults={filteredProducts.length}
       />
 
-      {/* 2. Main Layout: Left Sidebar + Product Grid */}
       <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 w-full pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Filter Sidebar (3 cols, hidden on mobile/tablet) */}
           <div className="hidden lg:block lg:col-span-3">
             <FilterSidebar
               filters={filters}
@@ -149,7 +147,6 @@ function CatalogContent() {
             />
           </div>
 
-          {/* Right Product Grid Shell (12 cols on mobile, 9 cols on desktop) */}
           <div className="col-span-1 lg:col-span-9 flex flex-col">
             <ActiveFilterBar
               filters={filters}
@@ -171,7 +168,6 @@ function CatalogContent() {
         </div>
       </div>
 
-      {/* Mobile Filters Slide-Over Drawer */}
       <Drawer
         isOpen={isMobileFiltersOpen}
         onClose={() => setIsMobileFiltersOpen(false)}

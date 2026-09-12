@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { NotificationItem } from '@/types/user';
-import { MOCK_NOTIFICATIONS } from '@/data/notifications';
+import { realtimeSocket } from '@/lib/socket';
 
 interface NotificationContextType {
   notifications: NotificationItem[];
@@ -15,7 +15,24 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  useEffect(() => {
+    const unsub = realtimeSocket.on('notification.created', (payload: any) => {
+      if (payload) {
+        addNotification({
+          title: payload.title || 'New Notification',
+          message: payload.message || '',
+          type: payload.type || 'order_update',
+          link: payload.link,
+        });
+      }
+    });
+
+    return () => {
+      unsub();
+    };
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 

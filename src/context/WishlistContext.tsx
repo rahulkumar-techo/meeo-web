@@ -1,12 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
-import { Product } from '@/types/product';
-import { MOCK_PRODUCTS } from '@/data/products';
+import React, { createContext, useContext } from 'react';
+import { useWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/hooks/wishlist/useWishlist';
+import type { WishlistItem } from '@/types/wishlist/wishlist.types';
 
 interface WishlistContextType {
   wishlistIds: string[];
-  wishlistProducts: Product[];
+  wishlistProducts: WishlistItem[];
   wishlistCount: number;
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
@@ -15,33 +15,38 @@ interface WishlistContextType {
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const INITIAL_WISHLIST = ['prod-01', 'prod-03', 'prod-05'];
-
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [wishlistIds, setWishlistIds] = useState<string[]>(INITIAL_WISHLIST);
+  const { data: wishlistData } = useWishlistQuery();
+  const addMutation = useAddToWishlistMutation();
+  const removeMutation = useRemoveFromWishlistMutation();
 
-  const toggleWishlist = (productId: string) => {
-    setWishlistIds((prev) =>
-      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
-    );
-  };
+  const items = wishlistData?.data?.items || [];
+  const wishlistIds = items.map((item) => item.productId || item.id);
 
   const isInWishlist = (productId: string) => {
     return wishlistIds.includes(productId);
   };
 
-  const clearWishlist = () => {
-    setWishlistIds([]);
+  const toggleWishlist = (productId: string) => {
+    if (isInWishlist(productId)) {
+      removeMutation.mutate(productId);
+    } else {
+      addMutation.mutate(productId);
+    }
   };
 
-  const wishlistProducts = MOCK_PRODUCTS.filter((p) => wishlistIds.includes(p.id));
+  const clearWishlist = () => {
+    items.forEach((item) => {
+      removeMutation.mutate(item.productId || item.id);
+    });
+  };
 
   return (
     <WishlistContext.Provider
       value={{
         wishlistIds,
-        wishlistProducts,
-        wishlistCount: wishlistIds.length,
+        wishlistProducts: items,
+        wishlistCount: wishlistData?.data?.totalItems || items.length,
         toggleWishlist,
         isInWishlist,
         clearWishlist,

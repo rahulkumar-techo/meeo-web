@@ -1,140 +1,141 @@
 /**
- * @file auth.service.ts
- * @description Authentication service communicating with Meeo server API endpoints.
+ * @file authService.ts
+ * @description Customer authentication, session lifecycle, CSRF tokens, and credentials management.
  */
 
-import { apiClient, executeSilentRefresh } from "@/config/client"
+import { apiClient, executeSilentRefresh } from '@/config/client';
+import { setStoredCsrfToken } from '@/lib/csrf';
+import type { ApiResponse } from '@/types/common/api.types';
 import type {
-  ApiResponse,
+  AuthUser,
+  CsrfResponse,
+  SignupPayload,
   LoginPayload,
-  RegisterPayload,
   VerifyOtpPayload,
   ResendOtpPayload,
   ForgotPasswordPayload,
   ResetPasswordPayload,
   AuthResponseData,
-  RefreshResponseData,
-  AuthUser,
-} from "./auth.type"
+} from '@/types/auth/auth.types';
 
 export const authService = {
   /**
-   * Log in user with email and password.
+   * Obtain CSRF token for mutating requests.
    */
-  async login(payload: LoginPayload): Promise<ApiResponse<AuthResponseData>> {
-    const response = await apiClient.post<ApiResponse<AuthResponseData>>(
-      "/auth/login",
-      payload
-    )
-    return response.data
-  },
-
-  /**
-   * Register a new user account.
-   */
-  async register(payload: RegisterPayload): Promise<ApiResponse<{ user: AuthUser }>> {
-    const response = await apiClient.post<ApiResponse<{ user: AuthUser }>>(
-      "/auth/register",
-      payload
-    )
-    return response.data
-  },
-
-  /**
-   * Verify email registration / activation OTP.
-   */
-  async verifyOtp(payload: VerifyOtpPayload): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>(
-      "/auth/verify-otp",
-      payload
-    )
-    return response.data
-  },
-
-  /**
-   * Resend verification OTP code to user's email.
-   */
-  async resendOtp(payload: ResendOtpPayload): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>(
-      "/auth/resend-otp",
-      payload
-    )
-    return response.data
-  },
-
-  /**
-   * Request password reset OTP email.
-   */
-  async forgotPassword(payload: ForgotPasswordPayload): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>(
-      "/auth/forgot-password",
-      payload
-    )
-    return response.data
-  },
-
-  /**
-   * Reset password with OTP and new password.
-   */
-  async resetPassword(payload: ResetPasswordPayload): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>(
-      "/auth/reset-password",
-      payload
-    )
-    return response.data
-  },
-
-  /**
-   * Fetch current authenticated user profile and roles.
-   */
-  async getMe(): Promise<ApiResponse<AuthUser>> {
-    const response = await apiClient.get<ApiResponse<AuthUser>>("/auth/me")
-    return response.data
-  },
-
-  /**
-   * Refresh authentication session via HttpOnly cookies.
-   */
-  async refreshToken(): Promise<ApiResponse<null>> {
-    await executeSilentRefresh()
-    return {
-      success: true,
-      message: "Session refreshed successfully",
-      data: null,
+  async getCsrfToken(): Promise<CsrfResponse> {
+    try {
+      const response = await apiClient.get<CsrfResponse>('/auth/csrf');
+      if (response.data?.csrfToken) {
+        setStoredCsrfToken(response.data.csrfToken);
+      }
+      return response.data;
+    } catch {
+      return { success: false, csrfToken: '' };
     }
   },
 
   /**
-   * Terminate current user session.
+   * Register a new customer account (/auth/signup or /auth/register).
+   */
+  async signup(payload: SignupPayload): Promise<ApiResponse<AuthResponseData>> {
+    try {
+      const response = await apiClient.post<ApiResponse<AuthResponseData>>('/auth/signup', payload);
+      return response.data;
+    } catch {
+      // Fallback route support
+      const fallback = await apiClient.post<ApiResponse<AuthResponseData>>('/auth/register', payload);
+      return fallback.data;
+    }
+  },
+
+  /**
+   * Alias for registration compatibility
+   */
+  async register(payload: SignupPayload): Promise<ApiResponse<AuthResponseData>> {
+    return this.signup(payload);
+  },
+
+  /**
+   * Authenticate customer with email and password.
+   */
+  async login(payload: LoginPayload): Promise<ApiResponse<AuthResponseData>> {
+    const response = await apiClient.post<ApiResponse<AuthResponseData>>('/auth/login', payload);
+    return response.data;
+  },
+
+  /**
+   * Verify email OTP passcode.
+   */
+  async verifyOtp(payload: VerifyOtpPayload): Promise<ApiResponse<null>> {
+    const response = await apiClient.post<ApiResponse<null>>('/auth/verify-otp', payload);
+    return response.data;
+  },
+
+  /**
+   * Resend verification OTP code.
+   */
+  async resendOtp(payload: ResendOtpPayload): Promise<ApiResponse<null>> {
+    const response = await apiClient.post<ApiResponse<null>>('/auth/resend-otp', payload);
+    return response.data;
+  },
+
+  /**
+   * Request password reset email.
+   */
+  async forgotPassword(payload: ForgotPasswordPayload): Promise<ApiResponse<null>> {
+    const response = await apiClient.post<ApiResponse<null>>('/auth/forgot-password', payload);
+    return response.data;
+  },
+
+  /**
+   * Reset account password with token/OTP.
+   */
+  async resetPassword(payload: ResetPasswordPayload): Promise<ApiResponse<null>> {
+    const response = await apiClient.post<ApiResponse<null>>('/auth/reset-password', payload);
+    return response.data;
+  },
+
+  /**
+   * Fetch current authenticated user profile.
+   */
+  async getMe(): Promise<ApiResponse<AuthUser>> {
+    const response = await apiClient.get<ApiResponse<AuthUser>>('/auth/me');
+    return response.data;
+  },
+
+  /**
+   * Refresh session via HttpOnly cookie.
+   */
+  async refreshToken(): Promise<ApiResponse<null>> {
+    await executeSilentRefresh();
+    return {
+      success: true,
+      message: 'Session refreshed successfully',
+      data: null,
+    };
+  },
+
+  /**
+   * Invalidate active customer session.
    */
   async logout(): Promise<ApiResponse<null>> {
     try {
-      const response = await apiClient.post<ApiResponse<null>>("/auth/logout")
-      return response.data
+      const response = await apiClient.post<ApiResponse<null>>('/auth/logout');
+      return response.data;
     } catch {
-      return { success: true, message: "Logged out locally" }
+      return { success: true, message: 'Logged out locally' };
     }
   },
 
   /**
-   * Terminate all active user sessions across all devices.
+   * Terminate all sessions across devices.
    */
   async logoutAll(): Promise<ApiResponse<null>> {
     try {
-      const response = await apiClient.post<ApiResponse<null>>("/auth/logout-all")
-      return response.data
+      const response = await apiClient.post<ApiResponse<null>>('/auth/logout-all');
+      return response.data;
     } catch {
-      try {
-        const fallback = await apiClient.post<ApiResponse<null>>(
-          "/auth/logout",
-          { allDevices: true },
-          { params: { all: true } }
-        )
-        return fallback.data
-      } catch {
-        return { success: true, message: "Logged out from all devices" }
-      }
+      return { success: true, message: 'Logged out from all devices' };
     }
   },
-}
-
+};

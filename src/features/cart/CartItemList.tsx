@@ -63,7 +63,7 @@ export const CartItemList: React.FC<CartItemListProps> = ({
                 </p>
               )}
               <span className="text-xs font-bold text-[#412ce7] block mt-1 sm:hidden">
-                ₹{item.product.price.toLocaleString('en-IN')}
+                ₹{Number(item.product.price || 0).toLocaleString('en-IN')}
               </span>
             </div>
           </div>
@@ -94,11 +94,11 @@ export const CartItemList: React.FC<CartItemListProps> = ({
             {/* Total Price */}
             <div className="text-right hidden sm:block min-w-[80px]">
               <span className="text-sm font-extrabold text-[#131b2e] block">
-                ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
+                ₹{(Number(item.product.price || 0) * item.quantity).toLocaleString('en-IN')}
               </span>
               {item.quantity > 1 && (
                 <span className="text-[10px] text-[#777588]">
-                  ₹{item.product.price.toLocaleString('en-IN')} each
+                  ₹{Number(item.product.price || 0).toLocaleString('en-IN')} each
                 </span>
               )}
             </div>

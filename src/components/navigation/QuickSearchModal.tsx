@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight, ArrowLeft, Sparkles, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { useSearchFilter } from '@/context/SearchFilterContext';
-import { MOCK_PRODUCTS } from '@/data/products';
+import { useProductsQuery } from '@/hooks/catalog/useCatalog';
+import { extractArray } from '@/lib/apiHelper';
 
 export const QuickSearchModal: React.FC = () => {
   const router = useRouter();
@@ -14,7 +15,7 @@ export const QuickSearchModal: React.FC = () => {
   const [localQuery, setLocalQuery] = useState('');
 
   const trendingSearches = [
-    'Aethel-01 Italian Sneaker',
+    'Running Shoes',
     'Apex Studio Tactile 75',
     'MagDock Pro Fast Wireless',
     'Matte ANC Headphones',
@@ -31,16 +32,13 @@ export const QuickSearchModal: React.FC = () => {
     }
   }, [isSearchModalOpen, searchQuery]);
 
-  const filteredResults = useMemo(() => {
-    if (!localQuery.trim()) return [];
-    const q = localQuery.toLowerCase();
-    return MOCK_PRODUCTS.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.categoryLabel.toLowerCase().includes(q) ||
-        p.tags.some((t) => t.toLowerCase().includes(q))
-    ).slice(0, 6);
-  }, [localQuery]);
+  const { data: searchResultsData } = useProductsQuery({
+    search: localQuery.trim() || undefined,
+    limit: 6,
+  });
+
+  const rawResults = extractArray(searchResultsData);
+  const filteredResults = localQuery.trim() ? rawResults.slice(0, 6) : [];
 
   const handleSelectQuery = (query: string) => {
     setLocalQuery(query);
@@ -64,9 +62,8 @@ export const QuickSearchModal: React.FC = () => {
       fullScreenOnMobile={true}
     >
       <div className="flex flex-col h-full gap-4">
-        {/* Search Input Bar (With Mobile Back Button) */}
+        {/* Search Input Bar */}
         <div className="relative flex items-center w-full border-b border-[#e2e7ff] dark:border-[#28334d] pb-3 pt-1 sm:pt-0">
-          {/* Mobile Back Arrow Button */}
           <button
             type="button"
             onClick={closeSearchModal}
@@ -76,7 +73,6 @@ export const QuickSearchModal: React.FC = () => {
             <ArrowLeft className="w-5 h-5 text-[#131b2e] dark:text-white" />
           </button>
 
-          {/* Desktop Search Icon */}
           <Search className="hidden sm:block w-5 h-5 text-[#412ce7] dark:text-[#685aff] shrink-0 mr-3" />
 
           <input
@@ -116,36 +112,43 @@ export const QuickSearchModal: React.FC = () => {
               Matching Catalog Objects ({filteredResults.length})
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {filteredResults.map((product) => (
-                <Link
-                  key={product.id}
-                  href={`/product/${product.id}`}
-                  onClick={closeSearchModal}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-[#e2e7ff] dark:border-[#28334d] hover:border-[#412ce7]/40 hover:bg-[#faf8ff] dark:hover:bg-[#182032] transition-all group"
-                >
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-12 h-12 rounded-lg object-cover bg-[#f4f5f8] dark:bg-[#181d28] shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h5 className="text-xs sm:text-sm font-bold text-[#131b2e] dark:text-white group-hover:text-[#412ce7] dark:group-hover:text-[#685aff] truncate">
-                      {product.name}
-                    </h5>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs font-extrabold text-[#131b2e] dark:text-white">
-                        ₹{product.price.toLocaleString('en-IN')}
-                      </span>
-                      {product.originalPrice && (
-                        <span className="text-[10px] text-[#777588] dark:text-[#a6abbf] line-through">
-                          ₹{product.originalPrice.toLocaleString('en-IN')}
+              {filteredResults.map((product: any) => {
+                const img = product.thumbnailUrl || product.images?.[0]?.url || product.images?.[0] || '';
+                const title = product.title || product.name || '';
+                const price = product.salePrice || product.basePrice || product.price || 0;
+                const origPrice = product.basePrice || product.originalPrice;
+
+                return (
+                  <Link
+                    key={product.id}
+                    href={`/product/${product.id}`}
+                    onClick={closeSearchModal}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-[#e2e7ff] dark:border-[#28334d] hover:border-[#412ce7]/40 hover:bg-[#faf8ff] dark:hover:bg-[#182032] transition-all group"
+                  >
+                    <img
+                      src={img}
+                      alt={title}
+                      className="w-12 h-12 rounded-lg object-cover bg-[#f4f5f8] dark:bg-[#181d28] shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h5 className="text-xs sm:text-sm font-bold text-[#131b2e] dark:text-white group-hover:text-[#412ce7] dark:group-hover:text-[#685aff] truncate">
+                        {title}
+                      </h5>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs font-extrabold text-[#131b2e] dark:text-white">
+                          ₹{Number(price).toLocaleString('en-IN')}
                         </span>
-                      )}
+                        {origPrice && origPrice > price && (
+                          <span className="text-[10px] text-[#777588] dark:text-[#a6abbf] line-through">
+                            ₹{Number(origPrice).toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[#777588] group-hover:text-[#412ce7] group-hover:translate-x-0.5 transition-all shrink-0" />
-                </Link>
-              ))}
+                    <ArrowRight className="w-4 h-4 text-[#777588] group-hover:text-[#412ce7] group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </Link>
+                );
+              })}
             </div>
 
             <button

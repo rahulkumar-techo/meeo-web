@@ -4,23 +4,51 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Volume2, Sparkles, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { MOCK_PRODUCTS } from '@/data/products';
+import { useProductsQuery } from '@/hooks/catalog/useCatalog';
+import { extractArray } from '@/lib/apiHelper';
 
 export const HeroSection: React.FC = () => {
-  const flagshipProduct = MOCK_PRODUCTS[1]; // Apex Studio
-  const companionProduct = MOCK_PRODUCTS[2]; // MagDock Pro
+  const { data: productsData } = useProductsQuery({ limit: 4 });
+  const products = extractArray(productsData);
+
+  const flagshipProduct = products[0] || {
+    id: 'prod-apex-studio',
+    title: 'Apex Studio Wireless Acoustic Monitors',
+    name: 'Apex Studio Wireless Acoustic Monitors',
+    basePrice: 34999,
+    salePrice: 34999,
+    price: 34999,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1200&auto=format&fit=crop',
+    images: [{ url: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=1200&auto=format&fit=crop' }],
+  };
+
+  const companionProduct = products[1] || {
+    id: 'prod-magdock-pro',
+    title: 'MagDock Pro Titanium Magnetic Hub',
+    name: 'MagDock Pro Titanium Magnetic Hub',
+    basePrice: 8499,
+    salePrice: 8499,
+    price: 8499,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=600&auto=format&fit=crop',
+    images: [{ url: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=600&auto=format&fit=crop' }],
+  };
+
+  const flagshipImg = (flagshipProduct as any).thumbnailUrl || (flagshipProduct as any).images?.[0]?.url || (flagshipProduct as any).images?.[0] || '';
+  const companionImg = (companionProduct as any).thumbnailUrl || (companionProduct as any).images?.[0]?.url || (companionProduct as any).images?.[0] || '';
+
+  const flagshipPrice = (flagshipProduct as any).salePrice || (flagshipProduct as any).basePrice || (flagshipProduct as any).price || 0;
+  const companionPrice = (companionProduct as any).salePrice || (companionProduct as any).basePrice || (companionProduct as any).price || 0;
+
+  const flagshipTitle = (flagshipProduct as any).title || (flagshipProduct as any).name || '';
+  const companionTitle = (companionProduct as any).title || (companionProduct as any).name || '';
 
   return (
     <section className="hidden md:block relative w-full max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 overflow-hidden">
-      {/* Ambient background depth glows */}
       <div className="absolute -top-32 right-10 w-[38rem] h-[38rem] bg-[#e3dfff]/40 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="absolute top-48 left-1/4 w-[28rem] h-[28rem] bg-[#ffdad2]/50 rounded-full blur-2xl pointer-events-none -z-10" />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-        {/* Left Narrative Column */}
         <div className="lg:col-span-5 flex flex-col items-start z-10">
-          {/* Overline Tag */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e2e7ff] text-[#412ce7] mb-5">
             <span className="w-2 h-2 rounded-full bg-[#fd6a49]" />
             <span className="text-[11px] font-bold uppercase tracking-wider">
@@ -28,17 +56,14 @@ export const HeroSection: React.FC = () => {
             </span>
           </div>
 
-          {/* Headline with warm coral punctuation (Hidden on mobile screens as requested) */}
           <h1 className="hidden sm:block text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#131b2e] tracking-tight leading-[1.1] mb-4">
             Find something you&apos;ll love<span className="text-[#fd6a49]">.</span>
           </h1>
 
-          {/* Thoughtful Sub-copy */}
           <p className="text-sm sm:text-lg text-[#464556] max-w-lg mb-6 sm:mb-8 leading-relaxed">
             Intelligent hardware, quiet desk objects, and tactile living pieces engineered for mindful daily rituals.
           </p>
 
-          {/* CTAs */}
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             <Link href="/drops">
               <Button
@@ -60,7 +85,6 @@ export const HeroSection: React.FC = () => {
             </Link>
           </div>
 
-          {/* Metric Strip */}
           <div className="mt-10 pt-6 flex items-center gap-6 sm:gap-8 border-t border-[#e2e7ff] w-full">
             <div>
               <span className="text-lg sm:text-xl font-extrabold text-[#131b2e] block">100%</span>
@@ -79,19 +103,16 @@ export const HeroSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Asymmetric Showcase */}
         <div className="lg:col-span-7 relative grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-6">
-          {/* Main Architectural Hero Card */}
           <div className="sm:col-span-8 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow relative group border border-[#e2e7ff]">
             <div className="aspect-[4/3] w-full overflow-hidden bg-[#eaedff]">
               <img
-                src={flagshipProduct.images[0]}
-                alt={flagshipProduct.name}
+                src={flagshipImg}
+                alt={flagshipTitle}
                 className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
               />
             </div>
 
-            {/* Floating Spec Overlay Card */}
             <div className="absolute bottom-3 inset-x-3 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-md flex items-center justify-between border border-[#e2e7ff]/80">
               <div className="min-w-0 pr-2">
                 <div className="flex items-center gap-1.5 mb-1">
@@ -101,10 +122,10 @@ export const HeroSection: React.FC = () => {
                   </span>
                 </div>
                 <h3 className="text-sm font-bold text-[#131b2e] truncate">
-                  {flagshipProduct.name}
+                  {flagshipTitle}
                 </h3>
                 <p className="text-sm font-extrabold text-[#412ce7] mt-0.5">
-                  ₹{flagshipProduct.price.toLocaleString('en-IN')}
+                  ₹{Number(flagshipPrice).toLocaleString('en-IN')}
                 </p>
               </div>
               <div className="shrink-0 flex flex-col items-end">
@@ -122,13 +143,12 @@ export const HeroSection: React.FC = () => {
             </div>
           </div>
 
-          {/* Companion Secondary Hardware Card */}
           <div className="sm:col-span-4 flex flex-col justify-between gap-4">
             <div className="bg-white rounded-2xl overflow-hidden shadow-sm p-3.5 flex flex-col group h-full border border-[#e2e7ff]">
               <div className="aspect-square w-full rounded-xl overflow-hidden bg-[#f2f3ff] mb-2.5 relative">
                 <img
-                  src={companionProduct.images[0]}
-                  alt={companionProduct.name}
+                  src={companionImg}
+                  alt={companionTitle}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
                 />
                 <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded text-[#131b2e] text-[10px] font-bold">
@@ -140,11 +160,11 @@ export const HeroSection: React.FC = () => {
                   Charging Hub
                 </span>
                 <h4 className="text-xs font-bold text-[#131b2e] truncate mt-0.5">
-                  {companionProduct.name}
+                  {companionTitle}
                 </h4>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs font-extrabold text-[#131b2e]">
-                    ₹{companionProduct.price.toLocaleString('en-IN')}
+                    ₹{Number(companionPrice).toLocaleString('en-IN')}
                   </span>
                   <Link
                     href={`/product/${companionProduct.id}`}
@@ -156,7 +176,6 @@ export const HeroSection: React.FC = () => {
               </div>
             </div>
 
-            {/* Curation Protocol Mini Callout */}
             <div className="bg-[#eaedff] rounded-2xl p-4 flex items-center gap-3 border border-[#dae2fd]">
               <div className="w-9 h-9 rounded-xl bg-[#412ce7] text-white flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />

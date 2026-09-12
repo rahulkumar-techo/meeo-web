@@ -7,7 +7,8 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import { FilterState } from '@/types/filter';
-import { CATEGORIES } from '@/data/categories';
+import { useCategoriesQuery } from '@/hooks/catalog/useCatalog';
+import { extractArray } from '@/lib/apiHelper';
 
 interface FilterSidebarProps {
   filters: FilterState;
@@ -20,6 +21,9 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   onFilterChange,
   onReset,
 }) => {
+  const { data: categoriesData } = useCategoriesQuery();
+  const categories = extractArray(categoriesData);
+
   const sizes = ['EU 40 / US 7', 'EU 41 / US 8', 'EU 42 / US 9', 'EU 43 / US 10', 'EU 44 / US 11', 'EU 45 / US 12'];
   const materials = ['Italian Nappa Leather', '6063 Aluminum', 'Waxed Canvas', 'Natural Gum Rubber', 'Terracotta', 'Beryllium'];
 
@@ -51,11 +55,11 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
           Category
         </h4>
         <div className="flex flex-col gap-1.5">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat: any) => {
             const isSelected = filters.category === cat.slug;
             return (
               <button
-                key={cat.id}
+                key={cat.id || cat.slug}
                 type="button"
                 onClick={() => onFilterChange('category', cat.slug)}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left ${
@@ -65,7 +69,9 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
                 }`}
               >
                 <span>{cat.name}</span>
-                <span className="text-[11px] text-[#777588]">({cat.itemCount})</span>
+                {cat.productCount !== undefined && (
+                  <span className="text-[11px] text-[#777588]">({cat.productCount})</span>
+                )}
               </button>
             );
           })}

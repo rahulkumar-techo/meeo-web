@@ -20,19 +20,35 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({ product }) => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { showToast } = useToast();
 
+  const variants = product.variants || [];
+  const [selectedVariantId, setSelectedVariantId] = useState(
+    variants.find((v: any) => v.status === 'ACTIVE' || v.isAvailable)?.id || variants[0]?.id || ''
+  );
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0]?.name || '');
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0]?.size || '');
   const [quantity, setQuantity] = useState(1);
 
   const isFavorited = isInWishlist(product.id);
 
+  const currentVariant = variants.find((v: any) => v.id === selectedVariantId) || variants[0];
+  const displayPrice = Number(currentVariant?.price ?? product.price ?? 0);
+  const displayOrigCandidate = currentVariant?.compareAtPrice
+    ? Number(currentVariant.compareAtPrice)
+    : product.originalPrice;
+  const displayOriginalPrice =
+    displayOrigCandidate !== undefined && displayOrigCandidate > displayPrice
+      ? displayOrigCandidate
+      : undefined;
+
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedColor, selectedSize);
+    const variantTitle = currentVariant?.title || currentVariant?.sku;
+    addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
     showToast(`Added ${quantity}x ${product.name} to bag`);
   };
 
   const handleBuyNow = () => {
-    addToCart(product, quantity, selectedColor, selectedSize);
+    const variantTitle = currentVariant?.title || currentVariant?.sku;
+    addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
     router.push('/checkout');
   };
 
@@ -66,23 +82,61 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({ product }) => {
         <div>
           <div className="flex items-baseline gap-2.5">
             <span className="text-3xl font-extrabold text-[#131b2e]">
-              ₹{product.price.toLocaleString('en-IN')}
+              ₹{displayPrice.toLocaleString('en-IN')}
             </span>
-            {product.originalPrice && (
+            {displayOriginalPrice ? (
               <span className="text-base text-[#777588] line-through">
-                ₹{product.originalPrice.toLocaleString('en-IN')}
+                ₹{displayOriginalPrice.toLocaleString('en-IN')}
               </span>
-            )}
+            ) : null}
           </div>
           <span className="text-xs text-[#777588]">Inclusive of all taxes · Free Priority Air Delivery</span>
         </div>
 
-        {product.originalPrice && (
+        {displayOriginalPrice && displayOriginalPrice > displayPrice && (
           <span className="px-3 py-1.5 rounded-xl bg-[#ffdad2] text-[#ae3115] text-xs font-bold">
-            Save {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+            Save {Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100)}%
           </span>
         )}
       </div>
+
+      {/* Product Variants Matrix Selector (Storage / Edition / Sku) */}
+      {variants.length > 1 && (
+        <div>
+          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#777588] mb-2.5">
+            <span>Edition / Configuration:</span>
+            <span className="text-[#131b2e] font-semibold">
+              {currentVariant?.title || currentVariant?.sku || 'Default'}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {variants.map((v: any) => {
+              const isSelected = v.id === selectedVariantId;
+              const isAvailable = v.status === 'ACTIVE' || v.isAvailable !== false;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  disabled={!isAvailable}
+                  onClick={() => setSelectedVariantId(v.id)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'border-[#412ce7] bg-[#eaedff] text-[#412ce7] shadow-xs'
+                      : !isAvailable
+                      ? 'opacity-40 border-[#e2e7ff] line-through cursor-not-allowed bg-[#f2f3ff]'
+                      : 'border-[#e2e7ff] hover:border-[#c7c4d9] text-[#131b2e] bg-white'
+                  }`}
+                >
+                  <span>{v.title || v.sku || `Variant ${v.id.slice(0, 6)}`}</span>
+                  <span className="ml-1.5 text-[11px] opacity-80">
+                    ₹{Number(v.price ?? 0).toLocaleString('en-IN')}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Colorway Selector */}
       {product.colors && product.colors.length > 0 && (

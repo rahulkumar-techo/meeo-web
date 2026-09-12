@@ -3,10 +3,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { CategoryItem } from '@/data/categories';
+
+export interface CategoryHeroItem {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  subcategories?: string[];
+}
 
 interface CategoryHeroProps {
-  category: CategoryItem;
+  category: CategoryHeroItem;
   subCategory: string;
   onSubCategoryChange: (sub: string) => void;
   totalResults: number;
@@ -18,6 +25,8 @@ export const CategoryHero: React.FC<CategoryHeroProps> = ({
   onSubCategoryChange,
   totalResults,
 }) => {
+  const subcategories = category.subcategories || [];
+
   return (
     <section className="w-full bg-[#f2f3ff]/60 border-b border-[#e2e7ff] pb-6 pt-4">
       <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8">
@@ -60,25 +69,27 @@ export const CategoryHero: React.FC<CategoryHeroProps> = ({
         </div>
 
         {/* Subcategory Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-2">
-          {category.subcategories.map((sub) => {
-            const isActive = subCategory === sub;
-            return (
-              <button
-                key={sub}
-                type="button"
-                onClick={() => onSubCategoryChange(sub)}
-                className={`h-9 px-4 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isActive
-                    ? 'bg-[#412ce7] text-white shadow-sm'
-                    : 'bg-white hover:bg-[#eaedff] text-[#131b2e] border border-[#e2e7ff]'
-                }`}
-              >
-                <span>{sub}</span>
-              </button>
-            );
-          })}
-        </div>
+        {subcategories.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-2">
+            {subcategories.map((sub) => {
+              const isActive = subCategory === sub;
+              return (
+                <button
+                  key={sub}
+                  type="button"
+                  onClick={() => onSubCategoryChange(sub)}
+                  className={`h-9 px-4 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#412ce7] text-white shadow-sm'
+                      : 'bg-white hover:bg-[#eaedff] text-[#131b2e] border border-[#e2e7ff]'
+                  }`}
+                >
+                  <span>{sub}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );

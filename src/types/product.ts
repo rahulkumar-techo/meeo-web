@@ -24,6 +24,7 @@ export interface Product {
   isArchivalDrop?: boolean;
   dropTimeRemaining?: string;
   tags: string[];
+  variants?: any[];
 }
 
 export type SortOption =

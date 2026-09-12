@@ -1,12 +1,11 @@
 /**
  * @file productService.ts
- * @description Product service for fetching items, categories, and single product details.
+ * @description Product service for fetching items, categories, and single product details directly via APIs.
  */
 
 import { apiClient } from '@/config/client';
-import type { ApiResponse } from '@/types/auth';
+import type { ApiResponse } from '@/types/common/api.types';
 import type { Product } from '@/types/product';
-import { MOCK_PRODUCTS } from '@/data/products';
 
 export interface GetProductsParams {
   category?: string;
@@ -18,51 +17,20 @@ export interface GetProductsParams {
 
 export const productService = {
   /**
-   * Get all products with query parameters and local mock fallback
+   * Get all products with query parameters via backend API
    */
   async getProducts(params?: GetProductsParams): Promise<ApiResponse<Product[]>> {
-    try {
-      const response = await apiClient.get<ApiResponse<Product[]>>('/products', {
-        params,
-      });
-      return response.data;
-    } catch {
-      // Graceful fallback to rich local catalog if backend endpoint is in progress
-      let filtered = [...MOCK_PRODUCTS];
-      if (params?.category) {
-        filtered = filtered.filter((p) => p.category === params.category);
-      }
-      if (params?.search) {
-        const q = params.search.toLowerCase();
-        filtered = filtered.filter(
-          (p) =>
-            p.name.toLowerCase().includes(q) ||
-            p.categoryLabel.toLowerCase().includes(q) ||
-            p.tags.some((t) => t.toLowerCase().includes(q))
-        );
-      }
-      return {
-        success: true,
-        message: 'Products retrieved',
-        data: filtered,
-      };
-    }
+    const response = await apiClient.get<ApiResponse<Product[]>>('/products', {
+      params,
+    });
+    return response.data;
   },
 
   /**
-   * Get single product by ID or slug
+   * Get single product by ID or slug via backend API
    */
   async getProductById(id: string): Promise<ApiResponse<Product | null>> {
-    try {
-      const response = await apiClient.get<ApiResponse<Product>>(`/products/${id}`);
-      return response.data;
-    } catch {
-      const found = MOCK_PRODUCTS.find((p) => p.id === id || p.slug === id) || null;
-      return {
-        success: Boolean(found),
-        message: found ? 'Product found' : 'Product not found',
-        data: found,
-      };
-    }
+    const response = await apiClient.get<ApiResponse<Product>>(`/products/${id}`);
+    return response.data;
   },
 };

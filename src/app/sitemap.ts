@@ -1,13 +1,12 @@
 import { MetadataRoute } from 'next';
-import { MOCK_PRODUCTS } from '@/data/products';
-import { CATEGORIES } from '@/data/categories';
 import { SITE_CONFIG } from '@/config/seo';
+import { catalogService } from '@/services/catalog/catalogService';
 
 /**
  * Dynamic Sitemap Generator for Next.js App Router
- * Outputs /sitemap.xml automatically with full static and dynamic route indexing.
+ * Outputs /sitemap.xml automatically with full static and dynamic route indexing via API.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = SITE_CONFIG.url;
   const currentDate = new Date().toISOString();
 
@@ -51,21 +50,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  // Category Filter Routes
-  const categoryRoutes: MetadataRoute.Sitemap = CATEGORIES.map((cat) => ({
-    url: `${baseUrl}/category?cat=${cat.id}`,
-    lastModified: currentDate,
-    changeFrequency: 'daily' as const,
-    priority: 0.8,
-  }));
+  try {
+    const [productsRes, categoriesRes] = await Promise.allSettled([
+      catalogService.getProducts({ limit: 100 }),
+      catalogService.getCategories(),
+    ]);
 
-  // Dynamic Product Pages
-  const productRoutes: MetadataRoute.Sitemap = MOCK_PRODUCTS.map((prod) => ({
-    url: `${baseUrl}/product/${prod.id}`,
-    lastModified: currentDate,
-    changeFrequency: 'daily' as const,
-    priority: 0.85,
-  }));
+    const products = productsRes.status === 'fulfilled' ? productsRes.value.data || [] : [];
+    const categories = categoriesRes.status === 'fulfilled' ? categoriesRes.value.data || [] : [];
 
-  return [...staticRoutes, ...categoryRoutes, ...productRoutes];
+    const categoryRoutes: MetadataRoute.Sitemap = categories.map((cat) => ({
+      url: `${baseUrl}/category?cat=${cat.slug || cat.id}`,
+      lastModified: currentDate,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }));
+
+    const productRoutes: MetadataRoute.Sitemap = products.map((prod) => ({
+      url: `${baseUrl}/product/${prod.slug || prod.id}`,
+      lastModified: currentDate,
+      changeFrequency: 'daily' as const,
+      priority: 0.85,
+    }));
+
+    return [...staticRoutes, ...categoryRoutes, ...productRoutes];
+  } catch {
+    return staticRoutes;
+  }
 }

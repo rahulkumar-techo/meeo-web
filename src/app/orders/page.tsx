@@ -4,9 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import { Package, ArrowLeft } from 'lucide-react';
 import { OrderHistoryList } from '@/features/orders/OrderHistoryList';
-import { MOCK_ORDERS } from '@/data/orders';
+import { useOrdersQuery } from '@/hooks/order/useOrder';
+import { extractArray } from '@/lib/apiHelper';
 
 export default function OrdersPage() {
+  const { data: ordersResponse, isLoading } = useOrdersQuery();
+  const orders = extractArray(ordersResponse);
+
   return (
     <div className="flex flex-col w-full pb-20">
       <section className="w-full bg-[#f2f3ff]/60 border-b border-[#e2e7ff] py-6">
@@ -32,7 +36,11 @@ export default function OrdersPage() {
       </section>
 
       <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 pt-8 w-full">
-        <OrderHistoryList orders={MOCK_ORDERS} />
+        {isLoading ? (
+          <div className="py-20 text-center text-sm text-[#777588]">Loading your orders...</div>
+        ) : (
+          <OrderHistoryList orders={orders} />
+        )}
       </div>
     </div>
   );

@@ -85,8 +85,8 @@ export const DealsOfTheDay: React.FC<DealsOfTheDayProps> = ({ products }) => {
               <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#f4f5f8] dark:bg-[#181d28] mb-1.5 sm:mb-2">
                 <Link href={`/product/${product.id}`} className="block w-full h-full">
                   <img
-                    src={product.images[0]}
-                    alt={product.name}
+                    src={product.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600&auto=format&fit=crop'}
+                    alt={product.name || 'Product'}
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                   />
                 </Link>
@@ -132,13 +132,13 @@ export const DealsOfTheDay: React.FC<DealsOfTheDayProps> = ({ products }) => {
                 <div className="mt-1 sm:mt-1.5 pt-1">
                   <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
                     <span className="text-xs sm:text-sm md:text-base font-black text-[#131b2e] dark:text-white">
-                      ₹{product.price.toLocaleString('en-IN')}
+                      ₹{Number(product.price ?? 0).toLocaleString('en-IN')}
                     </span>
-                    {product.originalPrice && (
+                    {product.originalPrice ? (
                       <span className="text-[9px] sm:text-[10px] text-[#777588] dark:text-[#a6abbf] line-through">
-                        ₹{product.originalPrice.toLocaleString('en-IN')}
+                        ₹{Number(product.originalPrice).toLocaleString('en-IN')}
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
                   <div className="flex items-center justify-between mt-1">

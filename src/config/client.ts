@@ -62,13 +62,21 @@ export async function executeSilentRefresh(): Promise<{ success: boolean }> {
   throw new Error("Invalid response received from refresh endpoint")
 }
 
-// Request Interceptor: Attach Access Token from State & Handle FormData
+import { getStoredCsrfToken } from "@/lib/csrf"
+
+// Request Interceptor: Attach Access Token, Guest Session, CSRF Token & Handle FormData
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = useUserStore.getState().accessToken;
 
     if (token && config.headers) {
       config.headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Attach CSRF token for mutating requests if available
+    const csrfToken = getStoredCsrfToken();
+    if (csrfToken && config.headers && !config.headers["X-CSRF-Token"]) {
+      config.headers["X-CSRF-Token"] = csrfToken;
     }
 
     // When payload is FormData, delete Content-Type so browser/Axios sets multipart/form-data with boundary

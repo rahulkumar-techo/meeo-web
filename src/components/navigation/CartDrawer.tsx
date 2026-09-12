@@ -198,7 +198,7 @@ export const CartDrawer: React.FC = () => {
                     </div>
 
                     <span className="text-xs font-bold text-[#131b2e]">
-                      ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
+                      ₹{(Number(item.product.price || 0) * item.quantity).toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>

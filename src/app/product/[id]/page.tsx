@@ -2,7 +2,6 @@
 
 import React, { use } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { ProductGallery } from '@/features/product/ProductGallery';
 import { ProductInfo } from '@/features/product/ProductInfo';
@@ -10,9 +9,11 @@ import { ProductSpecs } from '@/features/product/ProductSpecs';
 import { ProductReviewsSection } from '@/features/product/ProductReviewsSection';
 import { MobileStickyBuy } from '@/features/product/MobileStickyBuy';
 import { ProductCard } from '@/components/ui/ProductCard';
-import { MOCK_PRODUCTS } from '@/data/products';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { generateProductSchema, generateBreadcrumbSchema } from '@/config/seo';
+import { useProductByIdQuery, useProductsQuery } from '@/hooks/catalog/useCatalog';
+import { normalizeProduct, normalizeProducts } from '@/lib/apiHelper';
+import type { Product } from '@/types/product';
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -22,9 +23,25 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   const resolvedParams = use(params);
   const productId = resolvedParams.id;
 
-  const product = MOCK_PRODUCTS.find((p) => p.id === productId || p.slug === productId) || MOCK_PRODUCTS[0];
+  const { data: productResponse, isLoading } = useProductByIdQuery(productId);
+  const { data: allProductsResponse } = useProductsQuery({ limit: 4 });
 
-  const companionProducts = MOCK_PRODUCTS.filter((p) => p.id !== product.id).slice(0, 3);
+  const rawProduct = productResponse?.data || productResponse;
+  const companionProducts = normalizeProducts(allProductsResponse)
+    .filter((p) => p.id !== productId)
+    .slice(0, 3);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-sm text-[#777588]">Loading product specifications...</p>
+      </div>
+    );
+  }
+
+  const product: Product = rawProduct
+    ? normalizeProduct(rawProduct)
+    : normalizeProduct({ id: productId, name: 'Curated Catalog Item', price: 9999 });
 
   const productSchema = generateProductSchema(product);
   const breadcrumbSchema = generateBreadcrumbSchema([

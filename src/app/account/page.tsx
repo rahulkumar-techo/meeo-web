@@ -2,14 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { User, Package, Heart, Bell, ShieldCheck, ArrowRight, Settings } from 'lucide-react';
+import { User, Package, Heart, Bell, ArrowRight, Settings } from 'lucide-react';
 import { AccountProfileHeader } from '@/features/account/AccountProfileHeader';
 import { SavedAddressesCard } from '@/features/account/SavedAddressesCard';
 import { SavedPaymentsCard } from '@/features/account/SavedPaymentsCard';
 import { OrderHistoryList } from '@/features/orders/OrderHistoryList';
-import { MOCK_ORDERS } from '@/data/orders';
+import { useOrdersQuery } from '@/hooks/order/useOrder';
+import { extractArray } from '@/lib/apiHelper';
 
 export default function AccountPage() {
+  const { data: ordersResponse } = useOrdersQuery({ limit: 1 });
+  const recentOrders = extractArray(ordersResponse);
+
   return (
     <div className="flex flex-col w-full pb-20">
       {/* Top Bar */}
@@ -94,7 +98,7 @@ export default function AccountPage() {
             </Link>
           </div>
 
-          <OrderHistoryList orders={MOCK_ORDERS.slice(0, 1)} />
+          <OrderHistoryList orders={recentOrders} />
         </div>
       </div>
     </div>

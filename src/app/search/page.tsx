@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SearchHero } from '@/features/search/SearchHero';
 import { SearchResults } from '@/features/search/SearchResults';
-import { MOCK_PRODUCTS } from '@/data/products';
+import { useProductsQuery } from '@/hooks/catalog/useCatalog';
+import { normalizeProducts } from '@/lib/apiHelper';
+import type { Product } from '@/types/product';
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
@@ -19,42 +21,20 @@ function SearchPageContent() {
     }
   }, [queryParam]);
 
-  const filteredProducts = useMemo(() => {
-    let list = MOCK_PRODUCTS;
+  const activeSearch = query || (selectedTag !== 'All Results' ? selectedTag : '');
 
-    if (selectedTag !== 'All Results') {
-      const tagQuery = selectedTag.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(tagQuery) ||
-          p.categoryLabel.toLowerCase().includes(tagQuery) ||
-          p.materials?.some((m) => m.toLowerCase().includes(tagQuery)) ||
-          p.tags.some((t) => t.toLowerCase().includes(tagQuery))
-      );
-    }
+  const { data: productsData, isLoading } = useProductsQuery({
+    search: activeSearch,
+  });
 
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.subtitle.toLowerCase().includes(q) ||
-          p.categoryLabel.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.materials?.some((m) => m.toLowerCase().includes(q)) ||
-          p.tags.some((t) => t.toLowerCase().includes(q))
-      );
-    }
-
-    return list;
-  }, [query, selectedTag]);
+  const productsList = normalizeProducts(productsData);
 
   return (
     <div className="flex flex-col w-full pb-16">
       <SearchHero
         query={query}
         onQueryChange={setQuery}
-        resultCount={filteredProducts.length}
+        resultCount={productsList.length}
         selectedTag={selectedTag}
         onSelectTag={(t) => {
           setSelectedTag(t);
@@ -63,14 +43,18 @@ function SearchPageContent() {
       />
 
       <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <SearchResults
-          products={filteredProducts}
-          query={query || selectedTag}
-          onClearSearch={() => {
-            setQuery('');
-            setSelectedTag('All Results');
-          }}
-        />
+        {isLoading ? (
+          <div className="py-20 text-center text-sm text-[#777588]">Searching catalog...</div>
+        ) : (
+          <SearchResults
+            products={productsList}
+            query={query || selectedTag}
+            onClearSearch={() => {
+              setQuery('');
+              setSelectedTag('All Results');
+            }}
+          />
+        )}
       </div>
     </div>
   );

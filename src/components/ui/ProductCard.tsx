@@ -63,8 +63,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           className="w-full sm:w-48 aspect-square rounded-2xl overflow-hidden bg-[#f4f5f8] dark:bg-[#181d28] relative shrink-0 block"
         >
           <img
-            src={product.images[0]}
-            alt={product.name}
+            src={product.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600&auto=format&fit=crop'}
+            alt={product.name || 'Product'}
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
           />
           {product.badge && (
@@ -96,13 +96,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex items-center justify-between mt-3 pt-2">
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-black text-[#131b2e] dark:text-white">
-                ₹{product.price.toLocaleString('en-IN')}
+                ₹{Number(product.price ?? 0).toLocaleString('en-IN')}
               </span>
-              {product.originalPrice && (
+              {product.originalPrice ? (
                 <span className="text-xs text-[#777588] dark:text-[#a6abbf] line-through">
-                  ₹{product.originalPrice.toLocaleString('en-IN')}
+                  ₹{Number(product.originalPrice).toLocaleString('en-IN')}
                 </span>
-              )}
+              ) : null}
             </div>
 
             <div className="flex items-center gap-2">
@@ -138,8 +138,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <div className={`relative ${aspectClass} w-full overflow-hidden rounded-2xl bg-[#f4f5f8] dark:bg-[#181d28] mb-2.5`}>
         <Link href={`/product/${product.id}`} className="block w-full h-full">
           <img
-            src={product.images[0]}
-            alt={product.name}
+            src={product.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600&auto=format&fit=crop'}
+            alt={product.name || 'Product'}
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         </Link>
@@ -213,13 +213,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex flex-col">
             <div className="flex items-baseline gap-1.5">
               <span className="text-sm sm:text-base font-black text-[#131b2e] dark:text-white">
-                ₹{product.price.toLocaleString('en-IN')}
+                ₹{Number(product.price ?? 0).toLocaleString('en-IN')}
               </span>
-              {product.originalPrice && (
+              {product.originalPrice ? (
                 <span className="text-[10px] text-[#777588] dark:text-[#a6abbf] line-through">
-                  ₹{product.originalPrice.toLocaleString('en-IN')}
+                  ₹{Number(product.originalPrice).toLocaleString('en-IN')}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
 

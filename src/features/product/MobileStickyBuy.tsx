@@ -31,7 +31,7 @@ export const MobileStickyBuy: React.FC<MobileStickyBuyProps> = ({ product }) => 
       <div>
         <span className="text-[10px] text-[#777588] uppercase font-bold block">Total Price</span>
         <span className="text-base font-extrabold text-[#131b2e]">
-          ₹{product.price.toLocaleString('en-IN')}
+          ₹{Number(product.price ?? 0).toLocaleString('en-IN')}
         </span>
       </div>
 

@@ -1,30 +1,29 @@
 'use client';
 
 import React from 'react';
-import { TopCategoryBar } from '@/features/home/TopCategoryBar';
 import { HeroDealsBanner } from '@/features/home/HeroDealsBanner';
-import { BankOfferStrip } from '@/features/home/BankOfferStrip';
 import { DealsOfTheDay } from '@/features/home/DealsOfTheDay';
 import { CategoryProductRail } from '@/features/home/CategoryProductRail';
 import { InfiniteProductGrid } from '@/features/home/InfiniteProductGrid';
-import { MOCK_PRODUCTS } from '@/data/products';
+import { useProductsQuery } from '@/hooks/catalog/useCatalog';
+import { normalizeProducts } from '@/lib/apiHelper';
+import type { Product } from '@/types/product';
 
 export default function HomePage() {
-  const workspaceProducts = MOCK_PRODUCTS.filter((p) => p.category === 'workspace');
-  const footwearProducts = MOCK_PRODUCTS.filter((p) => p.category === 'footwear');
-  const budgetProducts = MOCK_PRODUCTS.filter((p) => p.price <= 5000);
+  const { data: productsData } = useProductsQuery({ limit: 50 });
+  const allProducts: Product[] = normalizeProducts(productsData);
+
+  const workspaceProducts = allProducts.filter((p) => p.category === 'workspace');
+  const footwearProducts = allProducts.filter((p) => p.category === 'footwear');
+  const budgetProducts = allProducts.filter((p) => (p.price || (p as any).basePrice || 0) <= 5000);
 
   return (
     <div className="flex flex-col w-full pb-16">
-   
-     {/* 2. Main Hero Deals & Offer Banner Carousel */}
+      {/* 2. Main Hero Deals & Offer Banner Carousel */}
       <HeroDealsBanner />
 
-      {/* 3. Bank Offer & Trust Guarantee Strip */}
-      {/* <BankOfferStrip /> */}
-
       {/* 4. Deals of the Day with Live Countdown Timer */}
-      <DealsOfTheDay products={MOCK_PRODUCTS} />
+      <DealsOfTheDay products={allProducts} />
 
       {/* 5. Best of Workspace & Tech Product Rail */}
       <CategoryProductRail
@@ -54,7 +53,7 @@ export default function HomePage() {
       />
 
       {/* 8. Full Recommended / Product Discovery Grid with Filters & Sort */}
-      <InfiniteProductGrid products={MOCK_PRODUCTS} />
+      <InfiniteProductGrid products={allProducts} />
     </div>
   );
 }

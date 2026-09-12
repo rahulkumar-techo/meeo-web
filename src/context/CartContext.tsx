@@ -5,7 +5,7 @@
  * @description Global shopping cart state with live backend synchronization, optimistic updates, and coupon management.
  */
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { Product } from '@/types/product';
 import { CartItem, CartSummary } from '@/types/cart';
 import { cartService } from '@/services/cart/cartService';
@@ -22,6 +22,7 @@ interface CartContextType {
   removeFromCart: (itemId: string) => Promise<void>;
   updateQuantity: (itemId: string, newQty: number) => Promise<void>;
   clearCart: () => Promise<void>;
+  refreshCart: () => Promise<void>;
   openCartDrawer: () => void;
   closeCartDrawer: () => void;
   applyCoupon: (code: string) => boolean;
@@ -30,20 +31,26 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
 
-  // Sync initial cart from backend on mount
-  useEffect(() => {
-    let isMounted = true;
-    cartService
-      .getCart()
-      .then((res) => {
-        if (!isMounted || !res?.data?.items) return;
-        const backendItems: CartItem[] = res.data.items.map((item: any) => ({
+  // Sync and hydrate cart items from backend
+  const refreshCart = useCallback(async () => {
+    try {
+      const res = await cartService.getCart();
+      const rawData = (res as any)?.data || res;
+      const itemsList = Array.isArray(rawData?.items)
+        ? rawData.items
+        : Array.isArray(rawData)
+        ? rawData
+        : [];
+      if (itemsList.length > 0 || (rawData && 'items' in rawData)) {
+        const backendItems: CartItem[] = itemsList.map((item: any) => ({
           id: item.id,
           productId: item.productId || item.variantId,
           variantId: item.variantId,
@@ -73,18 +80,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           selectedSize: item.attributes?.find((a: any) => a.name?.toLowerCase() === 'size')?.value,
           addedAt: new Date().toISOString(),
         }));
-        if (backendItems.length > 0) {
-          setItems(backendItems);
-        }
-      })
-      .catch((err) => {
-        console.warn('Backend cart hydration notice:', err);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+        setItems(backendItems);
+      }
+    } catch (err) {
+      console.warn('Cart hydration notice:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshCart();
+  }, [refreshCart]);
 
   const itemCount = useMemo(() => {
     return items.reduce((acc, item) => acc + item.quantity, 0);
@@ -117,19 +122,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = async (product: Product, quantity = 1, color?: string, size?: string) => {
     // 1. Resolve variant ID from product object or fetch details from server
-    let variant =
+    let targetVariantId =
       product.variants?.find(
         (v: any) =>
           (color && (v.title?.includes(color) || v.attributes?.some((a: any) => a.value === color))) ||
           (size && (v.title?.includes(size) || v.attributes?.some((a: any) => a.value === size)))
-      ) || product.variants?.[0];
+      )?.id || product.variants?.[0]?.id;
 
-    let targetVariantId = variant?.id;
-
-    if (!targetVariantId && product.id) {
+    if (!targetVariantId && (product.id || product.slug)) {
       try {
-        const prodRes = await catalogService.getProductById(product.id);
-        const serverVariants = (prodRes as any)?.data?.variants || (prodRes as any)?.variants || [];
+        let prodRes: any = null;
+        if (product.id && UUID_REGEX.test(product.id)) {
+          prodRes = await catalogService.getProductById(product.id);
+        } else if (product.slug) {
+          prodRes = await catalogService.getProductBySlug(product.slug);
+        }
+        const serverVariants = prodRes?.data?.variants || prodRes?.variants || [];
         if (serverVariants.length > 0) {
           const matched =
             serverVariants.find(
@@ -150,7 +158,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       targetVariantId = product.id;
     }
 
-    const tempId = `cart-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const tempId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : '00000000-0000-4000-8000-000000000000';
 
     // 2. Optimistic UI update
     setItems((prev) => {
@@ -182,18 +193,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsCartDrawerOpen(true);
 
-    // 3. Sync with backend API
+    // 3. Dispatch POST /api/v1/cart/items and sync database cart
     try {
-      const res = await cartService.addToCart({
-        variantId: targetVariantId,
-        quantity,
-      });
-
-      if (res.data?.addedItem?.id) {
-        const serverItemId = res.data.addedItem.id;
-        setItems((prev) =>
-          prev.map((item) => (item.id === tempId ? { ...item, id: serverItemId } : item))
-        );
+      if (targetVariantId && UUID_REGEX.test(targetVariantId)) {
+        await cartService.addToCart({
+          variantId: targetVariantId,
+          quantity,
+        });
+        await refreshCart();
       }
     } catch (err) {
       console.warn('Backend cart sync warning:', err);
@@ -202,10 +209,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeFromCart = async (itemId: string) => {
     setItems((prev) => prev.filter((item) => item.id !== itemId));
-    try {
-      await cartService.removeFromCart(itemId);
-    } catch (err) {
-      console.warn('Backend item remove warning:', err);
+    if (UUID_REGEX.test(itemId) && itemId !== '00000000-0000-4000-8000-000000000000') {
+      try {
+        await cartService.removeFromCart(itemId);
+        await refreshCart();
+      } catch (err) {
+        console.warn('Backend item remove warning:', err);
+      }
     }
   };
 
@@ -217,10 +227,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems((prev) =>
       prev.map((item) => (item.id === itemId ? { ...item, quantity: newQty } : item))
     );
-    try {
-      await cartService.updateCartItem(itemId, { quantity: newQty });
-    } catch (err) {
-      console.warn('Backend quantity update warning:', err);
+    if (UUID_REGEX.test(itemId) && itemId !== '00000000-0000-4000-8000-000000000000') {
+      try {
+        await cartService.updateCartItem(itemId, { quantity: newQty });
+        await refreshCart();
+      } catch (err) {
+        console.warn('Backend quantity update warning:', err);
+      }
     }
   };
 
@@ -269,6 +282,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeFromCart,
         updateQuantity,
         clearCart,
+        refreshCart,
         openCartDrawer,
         closeCartDrawer,
         applyCoupon,

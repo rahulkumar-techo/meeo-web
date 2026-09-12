@@ -4,6 +4,7 @@
  */
 
 import type { Product } from '@/types/product';
+import type { CartItem } from '@/types/cart';
 
 /**
  * Safely extracts an array from various backend response envelope shapes:
@@ -163,3 +164,72 @@ export function normalizeProducts(rawList: any): Product[] {
   const arr = extractArray(rawList);
   return arr.map(normalizeProduct);
 }
+
+/**
+ * Normalizes backend cart item into strongly typed frontend CartItem model.
+ */
+export function mapBackendCartItem(item: any): CartItem {
+  const prod = item?.product || {};
+  const variant = item?.variant || {};
+  const attrs = Array.isArray(variant?.attributes)
+    ? variant.attributes
+    : Array.isArray(item?.attributes)
+    ? item.attributes
+    : [];
+
+  const colorAttr = attrs.find(
+    (a: any) =>
+      a?.attribute?.toLowerCase() === 'color' ||
+      a?.name?.toLowerCase() === 'color'
+  );
+  const sizeAttr = attrs.find(
+    (a: any) =>
+      a?.attribute?.toLowerCase() === 'size' ||
+      a?.name?.toLowerCase() === 'size' ||
+      a?.attribute?.toLowerCase()?.includes('storage') ||
+      a?.name?.toLowerCase()?.includes('storage')
+  );
+
+  const thumb =
+    prod?.thumbnail ||
+    prod?.thumbnailUrl ||
+    item?.thumbnailUrl ||
+    (Array.isArray(prod?.images) ? prod.images[0]?.url || prod.images[0] : null) ||
+    'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600&auto=format&fit=crop';
+
+  const unitPrice = Number(item?.unitPrice ?? item?.price ?? prod?.price ?? 0);
+  const compPrice = item?.compareAtPrice
+    ? Number(item.compareAtPrice)
+    : item?.originalPrice
+    ? Number(item.originalPrice)
+    : undefined;
+
+  return {
+    id: String(item?.id || ''),
+    productId: String(prod?.id || item?.productId || item?.variantId || ''),
+    variantId: String(item?.variantId || ''),
+    product: {
+      id: String(prod?.id || item?.productId || item?.variantId || ''),
+      slug: String(prod?.slug || item?.productId || item?.variantId || ''),
+      name: String(prod?.name || item?.productTitle || item?.title || 'Curated Product'),
+      subtitle: String(variant?.sku || item?.variantTitle || ''),
+      category: 'objects',
+      categoryLabel: String(prod?.category?.name || item?.categoryLabel || 'Catalog'),
+      price: unitPrice,
+      originalPrice: compPrice,
+      rating: 4.8,
+      reviewCount: 0,
+      inStock: item?.stockInfo?.isAvailable !== false && item?.isAvailable !== false,
+      stockCount: Number(item?.stockInfo?.availableStock || item?.availableStock || 10),
+      description: String(prod?.description || ''),
+      images: [thumb],
+      specs: {},
+      tags: [],
+    },
+    quantity: Number(item?.quantity || 1),
+    selectedColor: colorAttr?.value,
+    selectedSize: sizeAttr?.value,
+    addedAt: item?.createdAt || new Date().toISOString(),
+  };
+}
+

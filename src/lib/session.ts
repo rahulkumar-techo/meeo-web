@@ -6,36 +6,32 @@
 const GUEST_SESSION_KEY = 'x-session-id';
 
 /**
- * Generate a random RFC4122 compliant UUID v4 string in vanilla JS
+ * Retrieves the stored guest session ID from localStorage.
  */
-function generateUUID(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-/**
- * Retrieves the existing guest session ID or initializes a new one.
- */
-export function getOrCreateSessionId(): string {
+export function getStoredSessionId(): string {
   if (typeof window === 'undefined') {
     return '';
   }
 
   try {
-    let sessionId = localStorage.getItem(GUEST_SESSION_KEY);
-    if (!sessionId) {
-      sessionId = `guest_${generateUUID()}`;
-      localStorage.setItem(GUEST_SESSION_KEY, sessionId);
-    }
-    return sessionId;
+    return localStorage.getItem(GUEST_SESSION_KEY) || '';
   } catch {
     return '';
+  }
+}
+
+/**
+ * Persists the guest session ID returned by the backend.
+ */
+export function setSessionId(sessionId: string): void {
+  if (typeof window === 'undefined' || !sessionId) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(GUEST_SESSION_KEY, sessionId);
+  } catch {
+    // Ignore localStorage access errors
   }
 }
 
@@ -51,3 +47,4 @@ export function clearSessionId(): void {
     }
   }
 }
+

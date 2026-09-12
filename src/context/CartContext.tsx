@@ -10,6 +10,8 @@ import { Product } from '@/types/product';
 import { CartItem, CartSummary } from '@/types/cart';
 import { cartService } from '@/services/cart/cartService';
 import { catalogService } from '@/services/catalog/catalogService';
+import { setSessionId } from '@/lib/session';
+import { mapBackendCartItem } from '@/lib/apiHelper';
 
 interface CartContextType {
   items: CartItem[];
@@ -44,43 +46,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await cartService.getCart();
       const rawData = (res as any)?.data || res;
+      if (rawData?.sessionId) {
+        setSessionId(rawData.sessionId);
+      }
       const itemsList = Array.isArray(rawData?.items)
         ? rawData.items
         : Array.isArray(rawData)
         ? rawData
         : [];
       if (itemsList.length > 0 || (rawData && 'items' in rawData)) {
-        const backendItems: CartItem[] = itemsList.map((item: any) => ({
-          id: item.id,
-          productId: item.productId || item.variantId,
-          variantId: item.variantId,
-          product: {
-            id: item.productId || item.variantId,
-            slug: item.productId || item.variantId,
-            name: item.productTitle || item.title || 'Curated Product',
-            subtitle: item.variantTitle || '',
-            category: 'objects',
-            categoryLabel: 'Catalog',
-            price: Number(item.unitPrice || item.price || 0),
-            originalPrice: item.originalPrice ? Number(item.originalPrice) : undefined,
-            rating: 4.8,
-            reviewCount: 0,
-            inStock: item.isAvailable !== false,
-            stockCount: item.availableStock || 10,
-            description: '',
-            images: [
-              item.thumbnailUrl ||
-                'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=600&auto=format&fit=crop',
-            ],
-            specs: {},
-            tags: [],
-          },
-          quantity: item.quantity,
-          selectedColor: item.attributes?.find((a: any) => a.name?.toLowerCase() === 'color')?.value,
-          selectedSize: item.attributes?.find((a: any) => a.name?.toLowerCase() === 'size')?.value,
-          addedAt: new Date().toISOString(),
-        }));
-        setItems(backendItems);
+        setItems(itemsList.map(mapBackendCartItem));
       }
     } catch (err) {
       console.warn('Cart hydration notice:', err);
@@ -196,11 +171,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 3. Dispatch POST /api/v1/cart/items and sync database cart
     try {
       if (targetVariantId && UUID_REGEX.test(targetVariantId)) {
-        await cartService.addToCart({
+        const addRes = await cartService.addToCart({
           variantId: targetVariantId,
           quantity,
         });
-        await refreshCart();
+        const cartData = (addRes as any)?.data || addRes;
+        if (cartData?.sessionId) {
+          setSessionId(cartData.sessionId);
+        }
+        if (Array.isArray(cartData?.items)) {
+          setItems(cartData.items.map(mapBackendCartItem));
+        } else {
+          await refreshCart();
+        }
       }
     } catch (err) {
       console.warn('Backend cart sync warning:', err);

@@ -63,6 +63,7 @@ export async function executeSilentRefresh(): Promise<{ success: boolean }> {
 }
 
 import { getStoredCsrfToken } from "@/lib/csrf"
+import { getStoredSessionId, setSessionId } from "@/lib/session"
 
 // Request Interceptor: Attach Access Token, Guest Session, CSRF Token & Handle FormData
 apiClient.interceptors.request.use(
@@ -71,6 +72,12 @@ apiClient.interceptors.request.use(
 
     if (token && config.headers) {
       config.headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Attach guest session ID if present
+    const guestSessionId = getStoredSessionId();
+    if (guestSessionId && config.headers && !config.headers["x-session-id"]) {
+      config.headers["x-session-id"] = guestSessionId;
     }
 
     // Attach CSRF token for mutating requests if available
@@ -95,7 +102,17 @@ apiClient.interceptors.request.use(
 
 // Response Interceptor: Handle 401 & Silent Refresh via HttpOnly cookies
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Capture and save session ID from response
+    const returnedSession =
+      response.headers?.["x-session-id"] ||
+      (response.data as any)?.data?.sessionId ||
+      (response.data as any)?.sessionId;
+    if (returnedSession) {
+      setSessionId(returnedSession);
+    }
+    return response;
+  },
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean

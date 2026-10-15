@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/store/user.store';
 import { OrdersTab } from '@/features/account/OrdersTab';
+import { AccountSettings } from '@/features/account/AccountSettings';
 import { AppRoute } from '@/routes';
 
 const SAVED_ADDRESSES = [
@@ -47,7 +48,7 @@ const SAVED_ADDRESSES = [
 ];
 
 export default function AccountPage() {
-  const [activeTab, setActiveTab] = useState<'orders' | 'addresses' | 'payments' | 'profile'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'addresses' | 'payments' | 'profile' | 'settings'>('orders');
   const { user, isAuthenticated } = useUserStore();
 
   const displayName = user
@@ -183,8 +184,24 @@ export default function AccountPage() {
               }`}
             >
               <div className="flex items-center gap-2.5">
+                <User className="w-4 h-4 text-[#8C5338]" />
+                <span>Profile Details</span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-[#786C64]" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'bg-[#EFEAE4] text-[#2D2621] font-bold'
+                  : 'text-[#786C64] hover:bg-[#FAF8F5] hover:text-[#2D2621]'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
                 <Settings className="w-4 h-4 text-[#8C5338]" />
-                <span>Account Settings</span>
+                <span>Settings &amp; Theme</span>
               </div>
               <ChevronRight className="w-3.5 h-3.5 text-[#786C64]" />
             </button>
@@ -368,6 +385,9 @@ export default function AccountPage() {
                 </div>
               </div>
             )}
+
+            {/* SETTINGS & APPEARANCE TAB */}
+            {activeTab === 'settings' && <AccountSettings />}
           </main>
         </div>
       </div>

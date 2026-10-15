@@ -245,6 +245,48 @@ body.dark,
   border-color: var(--border) !important;
 }
 
+/* UrbanNest Warm Palette Dark Mode Mappings */
+:is(.dark, [data-theme="dark"]) :is(
+  .bg-\[\#FAF8F5\],
+  [class*="bg-[#FAF8F5]"]
+) {
+  background-color: #120F0D !important;
+}
+
+:is(.dark, [data-theme="dark"]) :is(
+  .bg-\[\#EFEAE4\],
+  [class*="bg-[#EFEAE4]"],
+  .bg-\[\#F3EFEA\],
+  [class*="bg-[#F3EFEA]"],
+  .bg-\[\#EAE4DC\],
+  [class*="bg-[#EAE4DC]"]
+) {
+  background-color: #1F1B18 !important;
+}
+
+:is(.dark, [data-theme="dark"]) :is(
+  .text-\[\#2D2621\],
+  [class*="text-[#2D2621]"]
+) {
+  color: #F8F5F0 !important;
+}
+
+:is(.dark, [data-theme="dark"]) :is(
+  .text-\[\#786C64\],
+  [class*="text-[#786C64]"]
+) {
+  color: #A39990 !important;
+}
+
+:is(.dark, [data-theme="dark"]) :is(
+  .border-\[\#E8E2DA\],
+  [class*="border-[#E8E2DA]"],
+  .border-\[\#E5DFD7\],
+  [class*="border-[#E5DFD7]"]
+) {
+  border-color: #2D2723 !important;
+}
+
 /* Custom Meeo utility classes */
 .bg-primary { background-color: var(--primary); }
 .bg-primary-container { background-color: var(--primary-container); }

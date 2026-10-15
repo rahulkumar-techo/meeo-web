@@ -4,9 +4,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Search, Heart, ShoppingBag, User, Menu, X, ArrowRight } from 'lucide-react';
+import { Search, Heart, ShoppingBag, User, Menu, X, ArrowRight, Sun, Moon } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useTheme } from '@/context/ThemeContext';
 import type { UrbanNestProduct } from '@/data/urbanNestData';
 import { productService } from '@/services/product/productService';
 import { mapApiProductToUrbanNestProduct } from '@/services/product/productAdapter';
@@ -27,6 +28,7 @@ export const UrbanNestHeader: React.FC = () => {
   const searchParams = useSearchParams();
   const { itemCount, openCartDrawer } = useCart();
   const { wishlistCount } = useWishlist();
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -271,6 +273,21 @@ export const UrbanNestHeader: React.FC = () => {
             <Search className="w-4.5 h-4.5" />
           </button>
 
+          {/* Theme Mode Quick Toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-[#2D2621] hover:bg-[#F3EFEA] transition-colors cursor-pointer"
+            aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {resolvedTheme === 'dark' ? (
+              <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-amber-400" />
+            ) : (
+              <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-[#2D2621]" />
+            )}
+          </button>
+
           {/* Account Profile Link */}
           <Link
             href="/account"
@@ -365,6 +382,26 @@ export const UrbanNestHeader: React.FC = () => {
               );
             })}
           </nav>
+          <div className="pt-4 mt-4 border-t border-[#E8E2DA] flex items-center justify-between">
+            <span className="text-xs font-bold text-[#786C64]">Appearance</span>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EFEAE4] text-xs font-semibold text-[#2D2621] cursor-pointer"
+            >
+              {resolvedTheme === 'dark' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Light Mode</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-[#2D2621]" />
+                  <span>Dark Mode</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
     </header>

@@ -9,261 +9,299 @@ import {
   Smartphone,
   Flame,
   Tag,
-  ShieldCheck,
   Package,
   Sliders,
   Check,
   RotateCcw,
+  ShieldCheck,
 } from 'lucide-react';
-import Switch from '@mui/material/Switch';
-import Tooltip from '@mui/material/Tooltip';
-import Fade from '@mui/material/Fade';
 import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/context/ToastContext';
-import { Button } from '@/components/ui/Button';
 
 export const AccountSettings: React.FC = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const { showToast } = useToast();
 
   // Notification Preferences State
   const [pushEnabled, setPushEnabled] = useState(true);
   const [orderAlerts, setOrderAlerts] = useState(true);
   const [dropAlerts, setDropAlerts] = useState(true);
-  const [priceDropAlerts, setPriceDropAlerts] = useState(true);
+  const [priceDropAlerts, setPriceDropAlerts] = useState(false);
 
-  // Shopping & Experience Preferences
+  // Experience Preferences
   const [currency, setCurrency] = useState('INR');
-  const [packaging, setPackaging] = useState<'eco' | 'gift'>('eco');
   const [autoOpenDrawer, setAutoOpenDrawer] = useState(true);
-  const [twoFactorAuth, setTwoFactorAuth] = useState(true);
 
   const handleSaveSettings = () => {
     showToast('Preferences updated successfully!');
   };
 
   const handleClearCache = () => {
-    localStorage.removeItem('meeo_search_history');
-    showToast('Browsing and search cache cleared');
+    try {
+      localStorage.removeItem('urban_nest_search_history');
+      localStorage.removeItem('meeo_search_history');
+    } catch {
+      // Ignore
+    }
+    showToast('Local cache & search history cleared');
   };
 
   return (
-    <Fade in={true} timeout={400}>
-      <div className="flex flex-col gap-8">
-        {/* 1. Appearance & Dark Mode */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#e2e7ff] shadow-sm flex flex-col gap-6">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e2e7ff]">
-            <div className="flex items-center gap-2">
-              <Sun className="w-5 h-5 text-[#412ce7]" />
-              <h3 className="text-base font-bold text-[#131b2e]">Visual Appearance &amp; Theme</h3>
+    <div className="space-y-8">
+      {/* 1. APPEARANCE & THEME */}
+      <div className="space-y-4">
+        <div className="border-b border-[#E8E2DA] pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#2D2621]">
+                Visual Appearance
+              </h2>
+              <p className="text-xs text-[#786C64] mt-0.5">
+                Customize the interface theme to suit your lighting preference.
+              </p>
             </div>
-            <span className="text-xs font-semibold text-[#412ce7] uppercase">
-              Active: {theme}
+            <span className="px-3 py-1 rounded-full bg-[#8C5338]/10 text-[#8C5338] text-[11px] font-bold uppercase tracking-wider">
+              Active: {theme} ({resolvedTheme})
             </span>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Tooltip title="Light mode with ambient lilac studio surface" arrow>
-              <button
-                type="button"
-                onClick={() => {
-                  setTheme('light');
-                  showToast('Switched to Light Studio Theme');
-                }}
-                className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all ${
-                  theme === 'light'
-                    ? 'border-[#412ce7] bg-[#eaedff]/30 shadow-xs ring-2 ring-[#412ce7]/20 scale-[1.02]'
-                    : 'border-[#e2e7ff] hover:border-[#c7c4d9] bg-[#faf8ff]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-[#412ce7] shadow-xs">
-                    <Sun className="w-5 h-5" />
-                  </div>
-                  {theme === 'light' && <Check className="w-4 h-4 text-[#412ce7]" />}
-                </div>
-                <div>
-                  <span className="text-sm font-bold text-[#131b2e] block">Light Canvas</span>
-                  <p className="text-xs text-[#464556] mt-0.5">Airy lilac tinted studio surface</p>
-                </div>
-              </button>
-            </Tooltip>
-
-            <Tooltip title="Dark obsidian theme with reduced glare" arrow>
-              <button
-                type="button"
-                onClick={() => {
-                  setTheme('dark');
-                  showToast('Switched to Dark Monolith Theme');
-                }}
-                className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all ${
-                  theme === 'dark'
-                    ? 'border-[#412ce7] bg-[#eaedff]/30 shadow-xs ring-2 ring-[#412ce7]/20 scale-[1.02]'
-                    : 'border-[#e2e7ff] hover:border-[#c7c4d9] bg-[#faf8ff]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-[#131b2e] flex items-center justify-center text-white shadow-xs">
-                    <Moon className="w-5 h-5" />
-                  </div>
-                  {theme === 'dark' && <Check className="w-4 h-4 text-[#412ce7]" />}
-                </div>
-                <div>
-                  <span className="text-sm font-bold text-[#131b2e] block">Dark Obsidian</span>
-                  <p className="text-xs text-[#464556] mt-0.5">Low-light tactile contrast</p>
-                </div>
-              </button>
-            </Tooltip>
-
-            <Tooltip title="Synchronize automatically with operating system schedule" arrow>
-              <button
-                type="button"
-                onClick={() => {
-                  setTheme('system');
-                  showToast('Syncing theme with system preferences');
-                }}
-                className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all ${
-                  theme === 'system'
-                    ? 'border-[#412ce7] bg-[#eaedff]/30 shadow-xs ring-2 ring-[#412ce7]/20 scale-[1.02]'
-                    : 'border-[#e2e7ff] hover:border-[#c7c4d9] bg-[#faf8ff]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-[#464556] shadow-xs">
-                    <Laptop className="w-5 h-5" />
-                  </div>
-                  {theme === 'system' && <Check className="w-4 h-4 text-[#412ce7]" />}
-                </div>
-                <div>
-                  <span className="text-sm font-bold text-[#131b2e] block">System Automatic</span>
-                  <p className="text-xs text-[#464556] mt-0.5">Matches your OS schedule</p>
-                </div>
-              </button>
-            </Tooltip>
-          </div>
         </div>
 
-        {/* 2. Notification Preferences using MUI Switches */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#e2e7ff] shadow-sm flex flex-col gap-6">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e2e7ff]">
-            <div className="flex items-center gap-2">
-              <Bell className="w-5 h-5 text-[#412ce7]" />
-              <h3 className="text-base font-bold text-[#131b2e]">Telemetry &amp; Notification Channels</h3>
-            </div>
-          </div>
-
-          <div className="flex flex-col divide-y divide-[#f2f3ff]">
-            <div className="py-3.5 flex items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <Smartphone className="w-5 h-5 text-[#412ce7] shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs sm:text-sm font-bold text-[#131b2e] block">Browser Push Notifications</span>
-                  <p className="text-xs text-[#464556]">Receive real-time alerts when drops open or packages depart.</p>
-                </div>
-              </div>
-              <Switch checked={pushEnabled} onChange={(e) => setPushEnabled(e.target.checked)} />
-            </div>
-
-            <div className="py-3.5 flex items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <Package className="w-5 h-5 text-[#412ce7] shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs sm:text-sm font-bold text-[#131b2e] block">Courier GPS Milestones</span>
-                  <p className="text-xs text-[#464556]">SMS &amp; In-app updates for Air Priority dispatches.</p>
-                </div>
-              </div>
-              <Switch checked={orderAlerts} onChange={(e) => setOrderAlerts(e.target.checked)} />
-            </div>
-
-            <div className="py-3.5 flex items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <Flame className="w-5 h-5 text-[#fd6a49] shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs sm:text-sm font-bold text-[#131b2e] block">Archival Drop Invites</span>
-                  <p className="text-xs text-[#464556]">15-minute early access window before public serialization.</p>
-                </div>
-              </div>
-              <Switch checked={dropAlerts} onChange={(e) => setDropAlerts(e.target.checked)} />
-            </div>
-
-            <div className="py-3.5 flex items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <Tag className="w-5 h-5 text-[#ae3115] shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs sm:text-sm font-bold text-[#131b2e] block">Wishlist Price Drop Alerts</span>
-                  <p className="text-xs text-[#464556]">Immediate alert when saved objects enter seasonal curation.</p>
-                </div>
-              </div>
-              <Switch checked={priceDropAlerts} onChange={(e) => setPriceDropAlerts(e.target.checked)} />
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Shopping Preferences */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#e2e7ff] shadow-sm flex flex-col gap-6">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e2e7ff]">
-            <div className="flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-[#412ce7]" />
-              <h3 className="text-base font-bold text-[#131b2e]">Discerning Shopping Preferences</h3>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className="text-xs font-bold uppercase text-[#777588] block mb-2">Display Currency</label>
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full h-11 px-3.5 bg-[#faf8ff] border border-[#c7c4d9] rounded-xl text-sm font-semibold text-[#131b2e] outline-none cursor-pointer focus:border-[#412ce7]"
-              >
-                <option value="INR">INR (₹) · Indian Rupee</option>
-                <option value="USD">USD ($) · US Dollar</option>
-                <option value="EUR">EUR (€) · Euro</option>
-                <option value="GBP">GBP (£) · British Pound</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold uppercase text-[#777588] block mb-2">Default Packaging Mode</label>
-              <select
-                value={packaging}
-                onChange={(e) => setPackaging(e.target.value as 'eco' | 'gift')}
-                className="w-full h-11 px-3.5 bg-[#faf8ff] border border-[#c7c4d9] rounded-xl text-sm font-semibold text-[#131b2e] outline-none cursor-pointer focus:border-[#412ce7]"
-              >
-                <option value="eco">Zero-Plastic Unbleached Pulp Tray (Standard)</option>
-                <option value="gift">Studio Collector Velvet Gift Box (+₹250)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-[#e2e7ff] flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#131b2e]">Automatically slide-open bag drawer on item addition</span>
-              <Switch checked={autoOpenDrawer} onChange={(e) => setAutoOpenDrawer(e.target.checked)} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#131b2e]">Enforce 2-Factor Biometric authentication on checkout</span>
-              <Switch checked={twoFactorAuth} onChange={(e) => setTwoFactorAuth(e.target.checked)} />
-            </div>
-          </div>
-        </div>
-
-        {/* Action Footer */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-white rounded-3xl border border-[#e2e7ff] shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          {/* Light Theme Card */}
           <button
             type="button"
-            onClick={handleClearCache}
-            className="text-xs text-[#777588] hover:text-[#ba1a1a] font-semibold flex items-center gap-1.5 transition-colors"
+            onClick={() => {
+              setTheme('light');
+              showToast('Switched to Light Mode');
+            }}
+            className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-4 transition-all cursor-pointer ${
+              theme === 'light'
+                ? 'border-[#8C5338] bg-[#FAF8F5] ring-2 ring-[#8C5338]/30 shadow-xs'
+                : 'border-[#E8E2DA] hover:border-[#8C5338]/40 bg-white'
+            }`}
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Clear Local Search &amp; Cache</span>
+            <div className="flex items-center justify-between">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                  theme === 'light'
+                    ? 'bg-[#8C5338] text-white'
+                    : 'bg-[#FAF8F5] text-[#2D2621]'
+                }`}
+              >
+                <Sun className="w-5 h-5" />
+              </div>
+              {theme === 'light' && (
+                <div className="w-5 h-5 rounded-full bg-[#8C5338] text-white flex items-center justify-center">
+                  <Check className="w-3.5 h-3.5" />
+                </div>
+              )}
+            </div>
+            <div>
+              <span className="text-sm font-bold text-[#2D2621] block">Light Mode</span>
+              <p className="text-xs text-[#786C64] mt-0.5">
+                Clean daylight aesthetic with warm sand surfaces
+              </p>
+            </div>
           </button>
 
-          <Button variant="primary" size="md" onClick={handleSaveSettings}>
-            Save Preferences
-          </Button>
+          {/* Dark Theme Card */}
+          <button
+            type="button"
+            onClick={() => {
+              setTheme('dark');
+              showToast('Switched to Dark Mode');
+            }}
+            className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-4 transition-all cursor-pointer ${
+              theme === 'dark'
+                ? 'border-[#8C5338] bg-[#FAF8F5] ring-2 ring-[#8C5338]/30 shadow-xs'
+                : 'border-[#E8E2DA] hover:border-[#8C5338]/40 bg-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-[#8C5338] text-white'
+                    : 'bg-[#FAF8F5] text-[#2D2621]'
+                }`}
+              >
+                <Moon className="w-5 h-5" />
+              </div>
+              {theme === 'dark' && (
+                <div className="w-5 h-5 rounded-full bg-[#8C5338] text-white flex items-center justify-center">
+                  <Check className="w-3.5 h-3.5" />
+                </div>
+              )}
+            </div>
+            <div>
+              <span className="text-sm font-bold text-[#2D2621] block">Dark Mode</span>
+              <p className="text-xs text-[#786C64] mt-0.5">
+                Deep obsidian palette for comfortable low-light browsing
+              </p>
+            </div>
+          </button>
+
+          {/* System Automatic Card */}
+          <button
+            type="button"
+            onClick={() => {
+              setTheme('system');
+              showToast('Theme synced with device system settings');
+            }}
+            className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-4 transition-all cursor-pointer ${
+              theme === 'system'
+                ? 'border-[#8C5338] bg-[#FAF8F5] ring-2 ring-[#8C5338]/30 shadow-xs'
+                : 'border-[#E8E2DA] hover:border-[#8C5338]/40 bg-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                  theme === 'system'
+                    ? 'bg-[#8C5338] text-white'
+                    : 'bg-[#FAF8F5] text-[#2D2621]'
+                }`}
+              >
+                <Laptop className="w-5 h-5" />
+              </div>
+              {theme === 'system' && (
+                <div className="w-5 h-5 rounded-full bg-[#8C5338] text-white flex items-center justify-center">
+                  <Check className="w-3.5 h-3.5" />
+                </div>
+              )}
+            </div>
+            <div>
+              <span className="text-sm font-bold text-[#2D2621] block">System Automatic</span>
+              <p className="text-xs text-[#786C64] mt-0.5">
+                Adapts seamlessly to your operating system preference
+              </p>
+            </div>
+          </button>
         </div>
       </div>
-    </Fade>
+
+      {/* 2. NOTIFICATIONS & ALERTS */}
+      <div className="space-y-4 pt-4 border-t border-[#E8E2DA]">
+        <div>
+          <h2 className="font-serif text-lg sm:text-xl font-bold text-[#2D2621]">
+            Notifications &amp; Alerts
+          </h2>
+          <p className="text-xs text-[#786C64] mt-0.5">
+            Manage real-time alerts for dispatches, order updates, and seasonal drops.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <label className="flex items-center justify-between p-3.5 rounded-2xl border border-[#E8E2DA] hover:bg-[#FAF8F5]/50 transition-colors cursor-pointer">
+            <div className="flex items-start gap-3">
+              <Package className="w-4.5 h-4.5 text-[#8C5338] mt-0.5 shrink-0" />
+              <div>
+                <span className="text-xs font-bold text-[#2D2621] block">Order &amp; Courier Milestones</span>
+                <span className="text-[11px] text-[#786C64]">Real-time tracking notifications when parcels dispatch</span>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={orderAlerts}
+              onChange={(e) => setOrderAlerts(e.target.checked)}
+              className="w-4 h-4 accent-[#8C5338] rounded cursor-pointer"
+            />
+          </label>
+
+          <label className="flex items-center justify-between p-3.5 rounded-2xl border border-[#E8E2DA] hover:bg-[#FAF8F5]/50 transition-colors cursor-pointer">
+            <div className="flex items-start gap-3">
+              <Flame className="w-4.5 h-4.5 text-[#8C5338] mt-0.5 shrink-0" />
+              <div>
+                <span className="text-xs font-bold text-[#2D2621] block">New Arrivals &amp; Drops</span>
+                <span className="text-[11px] text-[#786C64]">Early access alerts for limited edition sneaker releases</span>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={dropAlerts}
+              onChange={(e) => setDropAlerts(e.target.checked)}
+              className="w-4 h-4 accent-[#8C5338] rounded cursor-pointer"
+            />
+          </label>
+
+          <label className="flex items-center justify-between p-3.5 rounded-2xl border border-[#E8E2DA] hover:bg-[#FAF8F5]/50 transition-colors cursor-pointer">
+            <div className="flex items-start gap-3">
+              <Tag className="w-4.5 h-4.5 text-[#8C5338] mt-0.5 shrink-0" />
+              <div>
+                <span className="text-xs font-bold text-[#2D2621] block">Wishlist Price Drop Alerts</span>
+                <span className="text-[11px] text-[#786C64]">Notifies you immediately when saved items go on discount</span>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={priceDropAlerts}
+              onChange={(e) => setPriceDropAlerts(e.target.checked)}
+              className="w-4 h-4 accent-[#8C5338] rounded cursor-pointer"
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* 3. EXPERIENCE PREFERENCES */}
+      <div className="space-y-4 pt-4 border-t border-[#E8E2DA]">
+        <div>
+          <h2 className="font-serif text-lg sm:text-xl font-bold text-[#2D2621]">
+            Experience Preferences
+          </h2>
+          <p className="text-xs text-[#786C64] mt-0.5">
+            Configure default currency display and shopping interface behaviors.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-[#786C64] mb-1.5">Display Currency</label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E2DA] bg-[#FAF8F5] text-xs font-medium text-[#2D2621] focus:outline-none focus:border-[#8C5338]"
+            >
+              <option value="INR">INR (₹) · Indian Rupee</option>
+              <option value="USD">USD ($) · United States Dollar</option>
+              <option value="EUR">EUR (€) · Euro</option>
+              <option value="GBP">GBP (£) · British Pound</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between p-3.5 rounded-2xl border border-[#E8E2DA] bg-[#FAF8F5]">
+            <div>
+              <span className="text-xs font-bold text-[#2D2621] block">Slide Open Cart Drawer</span>
+              <span className="text-[11px] text-[#786C64]">Auto open drawer when adding items to cart</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={autoOpenDrawer}
+              onChange={(e) => setAutoOpenDrawer(e.target.checked)}
+              className="w-4 h-4 accent-[#8C5338] rounded cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 4. ACTIONS & STORAGE */}
+      <div className="pt-6 border-t border-[#E8E2DA] flex flex-col sm:flex-row items-center justify-between gap-4">
+        <button
+          type="button"
+          onClick={handleClearCache}
+          className="text-xs font-semibold text-[#786C64] hover:text-red-600 flex items-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Clear Local Search &amp; Cache</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSaveSettings}
+          className="px-6 py-2.5 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+        >
+          Save Preferences
+        </button>
+      </div>
+    </div>
   );
 };

@@ -6,9 +6,9 @@ import { UrbanNestTrending } from '@/components/urbannest/UrbanNestTrending';
 import { UrbanNestPromoBanner } from '@/components/urbannest/UrbanNestPromoBanner';
 
 export const metadata = {
-  title: 'UrbanNest · Premium Footwear & Lifestyle Store',
+  title: 'UrbanNest · Modern Lifestyle, Apparel & Curated Essentials',
   description:
-    'Discover UrbanNest: Premium sneakers, crafted for comfort, designed for your everyday journey. Explore our new collection, trending styles, and exclusive deals.',
+    'Discover UrbanNest: Curated collections of premium apparel, modern lifestyle goods, electronics, and home essentials. Explore our new collection and exclusive deals.',
 };
 
 export default function HomePage() {

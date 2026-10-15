@@ -4,9 +4,9 @@ import Image from 'next/image';
 import { ArrowRight, ShieldCheck, Sparkles, Feather, Recycle, HeartHandshake } from 'lucide-react';
 
 export const metadata = {
-  title: 'Our Story · UrbanNest Premium Footwear & Lifestyle',
+  title: 'Our Story · UrbanNest Modern Lifestyle & Curated Goods',
   description:
-    'Learn about UrbanNest: premium sneakers, crafted for comfort, designed for your everyday journey.',
+    'Learn about UrbanNest: premium apparel, modern lifestyle essentials, and curated designs crafted for your everyday journey.',
 };
 
 export default function AboutPage() {

@@ -10,8 +10,11 @@ import { useToast } from '@/context/ToastContext';
 import type { CatalogItem } from '@/data/urbanNestCatalog';
 import { productService } from '@/services/product/productService';
 import { mapApiProductToCatalogItem } from '@/services/product/productAdapter';
+import { useUserStore } from '@/store/user.store';
+import { AppRoute } from '@/routes';
 
 export default function WishlistPage() {
+  const { isAuthenticated } = useUserStore();
   const { wishlistIds, toggleWishlist, clearWishlist } = useWishlist();
   const { addToCart, openCartDrawer } = useCart();
   const { showToast } = useToast();
@@ -68,6 +71,28 @@ export default function WishlistPage() {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="w-full min-h-[70vh] bg-[#FAF8F5] py-16 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center px-4">
+          <div className="w-20 h-20 rounded-full bg-[#EFEAE4] border border-[#E8E2DA] flex items-center justify-center mx-auto mb-6 text-[#8C5338]">
+            <Heart className="w-9 h-9" />
+          </div>
+          <h1 className="font-serif text-3xl font-bold text-[#2D2621] mb-3">Sign In to View Wishlist</h1>
+          <p className="text-xs text-[#786C64] mb-6 leading-relaxed">
+            Your saved items and personal vault require an active account. Please sign in or register to view and save products.
+          </p>
+          <Link
+            href={AppRoute.AUTH.LOGIN_WITH_REDIRECT(AppRoute.WISHLIST)}
+            className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold uppercase tracking-wider transition-colors"
+          >
+            Sign In to Account
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-h-screen bg-[#FAF8F5] py-8 sm:py-12">
       <div className="max-w-[88rem] mx-auto px-4 sm:px-6 lg:px-10">
@@ -91,7 +116,7 @@ export default function WishlistPage() {
               Saved Items ({wishlistedItems.length})
             </h1>
             <p className="text-sm text-[#786C64] mt-2">
-              Review your favorite footwear silhouettes and lifestyle essentials before they sell out.
+              Review your saved items and curated collection before they sell out.
             </p>
           </div>
 

@@ -24,6 +24,8 @@ import { useToast } from '@/context/ToastContext';
 import { useCategoriesQuery } from '@/hooks/catalog/useCatalog';
 import { productService } from '@/services/product/productService';
 import { mapApiProductToCatalogItem } from '@/services/product/productAdapter';
+import { useUserStore } from '@/store/user.store';
+import { AppRoute } from '@/routes';
 
 const PRICE_TIERS = [
   { id: 'all', label: 'All Prices', min: 0, max: Infinity },
@@ -242,6 +244,13 @@ export const CatalogView: React.FC = () => {
   const handleQuickAdd = async (product: CatalogItem, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      showToast('Please sign in to add items to your shopping bag.', 'info');
+      router.push(AppRoute.AUTH.LOGIN_WITH_REDIRECT(window.location.pathname + window.location.search));
+      return;
+    }
+
     try {
       const pPayload: any = {
         id: product.id,

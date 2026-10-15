@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useToast } from '@/context/ToastContext';
+import { useUserStore } from '@/store/user.store';
 import { AppRoute } from '@/routes';
 
 interface ProductInfoProps {
@@ -41,19 +42,37 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({ product }) => {
       ? displayOrigCandidate
       : undefined;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      showToast('Please sign in to add items to your cart.', 'info');
+      router.push(AppRoute.AUTH.LOGIN_WITH_REDIRECT(window.location.pathname + window.location.search));
+      return;
+    }
     const variantTitle = currentVariant?.title || currentVariant?.sku;
-    addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
+    await addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
     showToast(`Added ${quantity}x ${product.name} to bag`);
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      showToast('Please sign in to continue to checkout.', 'info');
+      router.push(AppRoute.AUTH.LOGIN_WITH_REDIRECT(AppRoute.CHECKOUT));
+      return;
+    }
     const variantTitle = currentVariant?.title || currentVariant?.sku;
-    addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
+    await addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
     router.push(AppRoute.CHECKOUT);
   };
 
   const handleWishlist = () => {
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      showToast('Please sign in to save items to your wishlist.', 'info');
+      router.push(AppRoute.AUTH.LOGIN_WITH_REDIRECT(window.location.pathname + window.location.search));
+      return;
+    }
     toggleWishlist(product.id);
     showToast(isFavorited ? 'Removed from wishlist' : 'Saved to wishlist');
   };

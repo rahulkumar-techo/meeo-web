@@ -12,6 +12,8 @@ import { cartService } from '@/services/cart/cartService';
 import { catalogService } from '@/services/catalog/catalogService';
 import { useUserStore } from '@/store/user.store';
 import { mapBackendCartItem } from '@/lib/apiHelper';
+import { useToast } from '@/context/ToastContext';
+import { AppRoute } from '@/routes';
 
 interface CartContextType {
   items: CartItem[];
@@ -39,6 +41,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const LOCAL_STORAGE_CART_KEY = 'meeo_cart_items_v2';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { showToast } = useToast();
   const [items, setItems] = useState<CartItem[]>([]);
   const [cartId, setCartId] = useState<string>('');
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
@@ -277,6 +280,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addToCart = async (product: Product, quantity = 1, color?: string, size?: string) => {
     if (!product) return;
 
+    // Login is compulsory: guests cannot add to cart
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      showToast('Please sign in to add items to your cart.', 'info');
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname + window.location.search;
+        setTimeout(() => {
+          window.location.href = AppRoute.AUTH.LOGIN_WITH_REDIRECT(currentPath);
+        }, 350);
+      }
+      return;
+    }
+
     // 1. Resolve variant ID from product object or fetch details from server
     let targetVariantId =
       (product as any)?.defaultVariantId ||
@@ -364,8 +380,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsCartDrawerOpen(true);
 
-    // 3. Dispatch POST /api/v1/cart/items and sync database cart when authenticated
-    const isAuth = useUserStore.getState().isAuthenticated;
+    // 3. Dispatch POST /api/v1/cart/items and sync database cart
     if (isAuth && targetVariantId && UUID_REGEX.test(targetVariantId)) {
       try {
         const addRes = await cartService.addToCart({

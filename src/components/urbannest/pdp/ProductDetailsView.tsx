@@ -23,6 +23,7 @@ import { ProductPurchasePanel } from './ProductPurchasePanel';
 import { ProductInfoTabs } from './ProductInfoTabs';
 import { ProductRecommendations } from './ProductRecommendations';
 import { VideoModal } from '../VideoModal';
+import { useUserStore } from '@/store/user.store';
 
 interface ProductDetailsViewProps {
   initialProduct: UrbanNestProductDetail;
@@ -83,6 +84,13 @@ export const ProductDetailsView: React.FC<ProductDetailsViewProps> = ({
 
   const handleAddToCart = async () => {
     if (!product) return;
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      showToast('Please sign in to add items to your shopping bag.', 'info');
+      router.push(AppRoute.AUTH.LOGIN_WITH_REDIRECT(window.location.pathname + window.location.search));
+      return;
+    }
+
     setIsAdding(true);
     try {
       const activePrice = currentVariant?.price ?? product.price ?? 0;
@@ -129,12 +137,24 @@ export const ProductDetailsView: React.FC<ProductDetailsViewProps> = ({
   };
 
   const handleBuyNow = async () => {
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      showToast('Please sign in to proceed to checkout.', 'info');
+      router.push(AppRoute.AUTH.LOGIN_WITH_REDIRECT(AppRoute.CHECKOUT));
+      return;
+    }
     await handleAddToCart();
     router.push(AppRoute.CHECKOUT);
   };
 
   const handleToggleWishlist = () => {
     if (!product?.id) return;
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      showToast('Please sign in to save items to your wishlist.', 'info');
+      router.push(AppRoute.AUTH.LOGIN_WITH_REDIRECT(window.location.pathname + window.location.search));
+      return;
+    }
     toggleWishlist(product.id);
     showToast(isFavorited ? 'Removed from wishlist' : 'Saved to wishlist');
   };

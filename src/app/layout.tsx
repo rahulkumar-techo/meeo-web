@@ -46,10 +46,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
   title: {
-    default: 'UrbanNest · Premium Footwear & Lifestyle Store',
+    default: 'UrbanNest · Modern Lifestyle, Apparel & Curated Essentials',
     template: '%s | UrbanNest',
   },
-  description: 'UrbanNest: Curated collection of iconic sneakers, lifestyle footwear, and premium apparel.',
+  description: 'UrbanNest: Curated collections of premium apparel, lifestyle goods, electronics, and home essentials.',
   keywords: SITE_CONFIG.keywords,
   authors: SITE_CONFIG.authors,
   creator: SITE_CONFIG.creator,

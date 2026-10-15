@@ -3,6 +3,8 @@
 import React, { createContext, useContext } from 'react';
 import { useWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from '@/hooks/wishlist/useWishlist';
 import { useUserStore } from '@/store/user.store';
+import { useToast } from '@/context/ToastContext';
+import { AppRoute } from '@/routes';
 import type { WishlistItem } from '@/types/wishlist/wishlist.types';
 
 interface WishlistContextType {
@@ -18,45 +20,28 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useUserStore((s) => s.isAuthenticated);
+  const { showToast } = useToast();
   const { data: wishlistData } = useWishlistQuery();
   const addMutation = useAddToWishlistMutation();
   const removeMutation = useRemoveFromWishlistMutation();
 
-  const [guestWishlistIds, setGuestWishlistIds] = React.useState<string[]>([]);
-
-  // Load guest wishlist on mount
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('urbannest_guest_wishlist');
-        if (saved) setGuestWishlistIds(JSON.parse(saved));
-      } catch (e) {
-        // ignore
-      }
-    }
-  }, []);
-
-  const items = wishlistData?.data?.items || [];
+  const items = isAuthenticated ? wishlistData?.data?.items || [] : [];
   const backendIds = items.map((item) => item.productId || item.id);
-  const activeWishlistIds = isAuthenticated ? backendIds : guestWishlistIds;
 
   const isInWishlist = (productId: string) => {
-    return activeWishlistIds.includes(productId);
+    if (!isAuthenticated) return false;
+    return backendIds.includes(productId);
   };
 
   const toggleWishlist = (productId: string) => {
     if (!isAuthenticated) {
-      setGuestWishlistIds((prev) => {
-        const next = prev.includes(productId)
-          ? prev.filter((id) => id !== productId)
-          : [...prev, productId];
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem('urbannest_guest_wishlist', JSON.stringify(next));
-          } catch (e) {}
-        }
-        return next;
-      });
+      showToast('Please sign in to save items to your wishlist.', 'info');
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname + window.location.search;
+        setTimeout(() => {
+          window.location.href = AppRoute.AUTH.LOGIN_WITH_REDIRECT(currentPath);
+        }, 350);
+      }
       return;
     }
 
@@ -68,13 +53,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const clearWishlist = () => {
-    if (!isAuthenticated) {
-      setGuestWishlistIds([]);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('urbannest_guest_wishlist');
-      }
-      return;
-    }
+    if (!isAuthenticated) return;
     items.forEach((item) => {
       removeMutation.mutate(item.productId || item.id);
     });
@@ -82,12 +61,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const totalCount = isAuthenticated
     ? (wishlistData?.data?.totalItems || items.length)
-    : guestWishlistIds.length;
+    : 0;
 
   return (
     <WishlistContext.Provider
       value={{
-        wishlistIds: activeWishlistIds,
+        wishlistIds: backendIds,
         wishlistProducts: items,
         wishlistCount: totalCount,
         toggleWishlist,

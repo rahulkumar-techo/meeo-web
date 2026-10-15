@@ -4,10 +4,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Search, Heart, ShoppingBag, User, Menu, X, ArrowRight, Sun, Moon } from 'lucide-react';
+import { Search, Heart, ShoppingBag, User, Menu, X, ArrowRight, Sun, Moon, LogOut, Package, Settings as SettingsIcon } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useUserStore } from '@/store/user.store';
+import { authService } from '@/services/auth/authService';
+import { useToast } from '@/context/ToastContext';
 import type { UrbanNestProduct } from '@/data/urbanNestData';
 import { productService } from '@/services/product/productService';
 import { mapApiProductToUrbanNestProduct } from '@/services/product/productAdapter';
@@ -29,13 +32,30 @@ export const UrbanNestHeader: React.FC = () => {
   const { itemCount, openCartDrawer } = useCart();
   const { wishlistCount } = useWishlist();
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { user, isAuthenticated, logout } = useUserStore();
+  const { showToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   const [searchCatalog, setSearchCatalog] = useState<UrbanNestProduct[]>([]);
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Local fallback
+    } finally {
+      logout();
+      setAccountMenuOpen(false);
+      showToast('Logged out successfully.', 'success');
+      router.push(AppRoute.HOME);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -88,6 +108,12 @@ export const UrbanNestHeader: React.FC = () => {
         !searchContainerRef.current.contains(e.target as Node)
       ) {
         setIsSearchFocused(false);
+      }
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(e.target as Node)
+      ) {
+        setAccountMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -288,14 +314,83 @@ export const UrbanNestHeader: React.FC = () => {
             )}
           </button>
 
-          {/* Account Profile Link */}
-          <Link
-            href="/account"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-[#2D2621] hover:bg-[#F3EFEA] transition-colors"
-            aria-label="Account"
-          >
-            <User className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
-          </Link>
+          {/* Account Profile / Dropdown */}
+          <div ref={accountMenuRef} className="relative">
+            {isAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-[#2D2621] hover:bg-[#F3EFEA] transition-colors cursor-pointer"
+                  aria-label="User Account Menu"
+                >
+                  <User className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-[#8C5338]" />
+                </button>
+
+                {accountMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#E8E2DA] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-4 py-2.5 border-b border-[#E8E2DA]">
+                      <div className="text-xs font-bold text-[#2D2621] truncate">
+                        {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'My Account'}
+                      </div>
+                      <div className="text-[11px] text-[#786C64] truncate">
+                        {user?.email}
+                      </div>
+                    </div>
+
+                    <div className="py-1">
+                      <Link
+                        href={AppRoute.ACCOUNT}
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#2D2621] hover:bg-[#FAF8F5] transition-colors"
+                      >
+                        <User className="w-4 h-4 text-[#8C5338]" />
+                        <span>Profile &amp; Account</span>
+                      </Link>
+
+                      <Link
+                        href={`${AppRoute.ACCOUNT}?tab=orders`}
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#2D2621] hover:bg-[#FAF8F5] transition-colors"
+                      >
+                        <Package className="w-4 h-4 text-[#8C5338]" />
+                        <span>My Orders</span>
+                      </Link>
+
+                      <Link
+                        href={`${AppRoute.ACCOUNT}?tab=settings`}
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#2D2621] hover:bg-[#FAF8F5] transition-colors"
+                      >
+                        <SettingsIcon className="w-4 h-4 text-[#8C5338]" />
+                        <span>Settings &amp; Theme</span>
+                      </Link>
+                    </div>
+
+                    <div className="pt-1 border-t border-[#E8E2DA]">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
+                      >
+                        <LogOut className="w-4 h-4 text-red-600" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Link
+                href={AppRoute.AUTH.LOGIN_WITH_REDIRECT(pathname)}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-[#2D2621] hover:bg-[#F3EFEA] transition-colors"
+                aria-label="Sign In"
+                title="Sign In"
+              >
+                <User className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              </Link>
+            )}
+          </div>
 
           {/* Wishlist Link */}
           <Link
@@ -402,6 +497,43 @@ export const UrbanNestHeader: React.FC = () => {
               )}
             </button>
           </div>
+
+          {/* Mobile Auth Row */}
+          {isAuthenticated ? (
+            <div className="pt-4 mt-4 border-t border-[#E8E2DA] flex items-center justify-between">
+              <Link
+                href={AppRoute.ACCOUNT}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#EFEAE4] border border-[#E8E2DA] flex items-center justify-center text-xs font-bold text-[#8C5338]">
+                  {user?.firstName?.[0] || 'U'}
+                </div>
+                <div className="text-xs text-left">
+                  <div className="font-bold text-[#2D2621]">{user?.firstName || 'My Account'}</div>
+                  <div className="text-[11px] text-[#786C64] truncate max-w-[140px]">{user?.email}</div>
+                </div>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          ) : (
+            <div className="pt-4 mt-4 border-t border-[#E8E2DA]">
+              <Link
+                href={AppRoute.AUTH.LOGIN_WITH_REDIRECT(pathname)}
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center py-2.5 rounded-xl bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold uppercase tracking-wider transition-colors"
+              >
+                Sign In / Register
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </header>

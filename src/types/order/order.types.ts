@@ -92,22 +92,38 @@ export interface PlaceOrderPayload {
   currency?: string;
 }
 
+export interface OrderAddress {
+  recipientName?: string;
+  phone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
 export interface OrderItemSnapshot {
   id: string;
-  variantId: string;
-  title: string;
+  variantId?: string;
+  productName?: string;
+  title?: string;
   variantTitle?: string;
   sku?: string;
   quantity: number;
   unitPrice: number;
-  totalPrice?: number;
+  totalPrice: number;
   thumbnailUrl?: string;
 }
 
 export interface OrderStatusHistoryItem {
-  status: OrderStatus;
-  timestamp: string;
+  previousStatus?: OrderStatus;
+  newStatus?: OrderStatus;
+  status?: OrderStatus;
+  reason?: string;
   note?: string;
+  createdAt?: string;
+  timestamp?: string;
 }
 
 export interface OrderTrackingInfo {
@@ -121,17 +137,23 @@ export interface OrderTrackingInfo {
 export interface OrderDetails {
   id: string;
   orderNumber: string;
+  userId?: string;
   status: OrderStatus;
-  paymentStatus: PaymentStatus;
+  paymentStatus?: PaymentStatus;
   currency: string;
   subtotal: number;
+  discountTotal?: number;
   discountAmount?: number;
+  shippingTotal?: number;
   shippingFee?: number;
+  taxTotal?: number;
   taxAmount?: number;
-  totalAmount: number;
+  grandTotal: number;
+  totalAmount?: number;
   createdAt: string;
   expiresAt?: string;
-  shippingAddress?: SavedAddress;
+  address?: OrderAddress;
+  shippingAddress?: OrderAddress | SavedAddress;
   items: OrderItemSnapshot[];
   statusHistory?: OrderStatusHistoryItem[];
   tracking?: OrderTrackingInfo;
@@ -165,14 +187,19 @@ export interface PlaceOrderResponse {
 
 export interface OrderListParams extends PaginationParams {
   status?: OrderStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface OrderListItem {
   id: string;
   orderNumber: string;
   status: OrderStatus;
-  paymentStatus: PaymentStatus;
-  totalAmount: number;
+  paymentStatus?: PaymentStatus;
+  grandTotal: number;
+  totalAmount?: number;
+  currency: string;
   itemCount: number;
   createdAt: string;
   itemsPreview?: Array<{
@@ -182,12 +209,24 @@ export interface OrderListItem {
   }>;
 }
 
+export interface OrderListResponseData {
+  items: OrderListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface CancelOrderPayload {
   reason: string;
 }
 
 export interface CancelOrderResponse {
-  orderId: string;
+  id?: string;
+  orderId?: string;
+  orderNumber?: string;
   status: OrderStatus;
   refundInitiated?: boolean;
 }

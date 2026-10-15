@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { label: 'Shop', href: AppRoute.CATEGORY },
   { label: 'Categories', href: `${AppRoute.CATEGORY}?view=categories` },
   { label: 'Deals', href: `${AppRoute.CATEGORY}?deals=true` },
+  { label: 'Track Order', href: AppRoute.TRACK },
   { label: 'About', href: AppRoute.ABOUT },
 ];
 
@@ -121,6 +122,8 @@ export const UrbanNestHeader: React.FC = () => {
               } else if (link.label === 'Shop') {
                 isActive =
                   pathname.startsWith('/category') && !isDeals && !isCategoriesView;
+              } else if (link.label === 'Track Order') {
+                isActive = pathname.startsWith('/track') || pathname.startsWith('/orders/track');
               } else if (link.label === 'About') {
                 isActive = pathname.startsWith('/about');
               }

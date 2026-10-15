@@ -18,69 +18,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useUserStore } from '@/store/user.store';
-
-const MOCK_ORDERS = [
-  {
-    id: 'UN-2026-8941',
-    date: 'October 10, 2026',
-    status: 'In Transit',
-    statusVariant: 'transit',
-    tracking: 'Track ID: DL-8839210',
-    eta: 'Expected by Oct 15, 2026',
-    total: 7995,
-    items: [
-      {
-        name: "Nike Air Force 1 '07",
-        category: "Men's Sneakers",
-        size: 'UK 9',
-        color: 'Brown / Beige',
-        price: 7995,
-        qty: 1,
-        image: '/assets/urbannest/trending-nike-af1.jpg',
-      },
-    ],
-  },
-  {
-    id: 'UN-2026-7729',
-    date: 'September 24, 2026',
-    status: 'Delivered',
-    statusVariant: 'delivered',
-    tracking: 'Delivered to Home Address',
-    eta: 'Delivered on Sep 27, 2026',
-    total: 8499,
-    items: [
-      {
-        name: 'Adidas Samba OG',
-        category: 'Unisex Sneakers',
-        size: 'UK 8',
-        color: 'Core Black / White',
-        price: 8499,
-        qty: 1,
-        image: '/assets/urbannest/trending-samba-og.jpg',
-      },
-    ],
-  },
-  {
-    id: 'UN-2026-6110',
-    date: 'August 14, 2026',
-    status: 'Delivered',
-    statusVariant: 'delivered',
-    tracking: 'Delivered to Home Address',
-    eta: 'Delivered on Aug 18, 2026',
-    total: 7499,
-    items: [
-      {
-        name: 'New Balance 574 Legacy',
-        category: 'Unisex Sneakers',
-        size: 'UK 9',
-        color: 'Cream / Beige',
-        price: 7499,
-        qty: 1,
-        image: '/assets/urbannest/trending-nb-574.jpg',
-      },
-    ],
-  },
-];
+import { OrdersTab } from '@/features/account/OrdersTab';
 
 const SAVED_ADDRESSES = [
   {
@@ -175,7 +113,7 @@ export default function AccountPage() {
             >
               <div className="flex items-center gap-2.5">
                 <Package className="w-4 h-4 text-[#8C5338]" />
-                <span>Orders ({MOCK_ORDERS.length})</span>
+                <span>Orders</span>
               </div>
               <ChevronRight className="w-3.5 h-3.5 text-[#786C64]" />
             </button>
@@ -233,106 +171,7 @@ export default function AccountPage() {
           <main className="lg:col-span-9 bg-white rounded-2xl border border-[#E8E2DA] p-6 sm:p-8 shadow-2xs">
             
             {/* ORDERS TAB */}
-            {activeTab === 'orders' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-[#E8E2DA] pb-4">
-                  <div>
-                    <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#2D2621]">
-                      Your Orders
-                    </h2>
-                    <p className="text-xs text-[#786C64] mt-0.5">
-                      Review previous purchases, tracking updates, and invoices.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-5">
-                  {MOCK_ORDERS.map((order) => (
-                    <div
-                      key={order.id}
-                      className="border border-[#E8E2DA] rounded-2xl p-5 hover:border-[#8C5338]/30 transition-all bg-[#FAF8F5]/40"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8E2DA] pb-3 mb-4">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-bold text-[#2D2621]">
-                            Order {order.id}
-                          </span>
-                          <span className="text-xs text-[#786C64]">• {order.date}</span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
-                              order.statusVariant === 'delivered'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }`}
-                          >
-                            {order.statusVariant === 'delivered' ? (
-                              <CheckCircle2 className="w-3 h-3" />
-                            ) : (
-                              <Truck className="w-3 h-3" />
-                            )}
-                            <span>{order.status}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-4">
-                          <div className="relative w-16 h-16 rounded-xl bg-white border border-[#E8E2DA] overflow-hidden p-2 shrink-0">
-                            <Image
-                              src={item.image}
-                              alt={item.name}
-                              fill
-                              sizes="64px"
-                              className="object-contain"
-                            />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-xs sm:text-sm font-bold text-[#2D2621] truncate">
-                              {item.name}
-                            </h3>
-                            <p className="text-[11px] text-[#786C64]">
-                              Size: {item.size} • Color: {item.color} • Qty: {item.qty}
-                            </p>
-                            <p className="text-xs font-semibold text-[#8C5338] mt-0.5">
-                              {order.eta}
-                            </p>
-                          </div>
-
-                          <div className="text-right">
-                            <div className="text-sm font-bold text-[#2D2621]">
-                              ₹{item.price.toLocaleString('en-IN')}
-                            </div>
-                            <span className="text-[10px] text-[#786C64]">Tax Included</span>
-                          </div>
-                        </div>
-                      ))}
-
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 mt-4 border-t border-[#E8E2DA]/80">
-                        <span className="text-xs text-[#786C64]">{order.tracking}</span>
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href="/product/urban-nike-af1"
-                            className="px-4 py-1.5 rounded-full border border-[#E8E2DA] hover:bg-white text-xs font-semibold text-[#2D2621] transition-colors"
-                          >
-                            Buy Again
-                          </Link>
-                          <button
-                            type="button"
-                            className="px-4 py-1.5 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-semibold transition-colors cursor-pointer"
-                          >
-                            Track Package
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {activeTab === 'orders' && <OrdersTab />}
 
             {/* ADDRESSES TAB */}
             {activeTab === 'addresses' && (

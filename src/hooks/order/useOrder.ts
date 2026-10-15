@@ -18,6 +18,7 @@ import type {
   OrderDetails,
   OrderListItem,
   OrderListParams,
+  OrderListResponseData,
   CancelOrderPayload,
   CancelOrderResponse,
 } from '@/types/order/order.types';
@@ -57,7 +58,7 @@ export function usePlaceOrderMutation() {
 export function useOrdersQuery(params?: OrderListParams) {
   const isAuthenticated = useUserStore((s) => s.isAuthenticated);
 
-  return useQuery<PaginatedResponse<OrderListItem>>({
+  return useQuery<ApiResponse<OrderListResponseData>>({
     queryKey: queryKeys.orders.list(params),
     queryFn: () => orderService.getOrders(params),
     enabled: isAuthenticated,

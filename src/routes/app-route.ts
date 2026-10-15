@@ -40,6 +40,9 @@ export const AppRoute = {
   WISHLIST: '/wishlist',
   ORDERS: '/orders',
   ORDER_DETAIL: (orderId: string) => `/orders/${encodeURIComponent(orderId)}`,
+  TRACK: '/track',
+  ORDER_TRACK: (orderNumber?: string) =>
+    orderNumber ? `/track?orderNumber=${encodeURIComponent(orderNumber)}` : '/track',
 
   // Authentication Pages
   AUTH: {

@@ -14,6 +14,7 @@ import type {
   OrderDetails,
   OrderListItem,
   OrderListParams,
+  OrderListResponseData,
   CancelOrderPayload,
   CancelOrderResponse,
 } from '@/types/order/order.types';
@@ -57,8 +58,8 @@ export const orderService = {
    */
   async getOrders(
     params?: OrderListParams
-  ): Promise<PaginatedResponse<OrderListItem>> {
-    const response = await apiClient.get<PaginatedResponse<OrderListItem>>(
+  ): Promise<ApiResponse<OrderListResponseData>> {
+    const response = await apiClient.get<ApiResponse<OrderListResponseData>>(
       ApiRoute.ORDERS.ORDERS,
       {
         params,

@@ -67,7 +67,7 @@ export const UrbanNestCategories: React.FC = () => {
                   </div>
                 </div>
               ))
-            : categories.map((category) => (
+            : categories.map((category, idx) => (
                 <Link
                   key={category.id}
                   href={category.href}
@@ -79,6 +79,8 @@ export const UrbanNestCategories: React.FC = () => {
                       src={category.image}
                       alt={category.label}
                       fill
+                      loading="eager"
+                      priority={idx < 4}
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
                       className="object-contain p-2 transition-transform duration-500 ease-out group-hover:scale-105"
                     />

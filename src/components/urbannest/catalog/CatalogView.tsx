@@ -332,7 +332,7 @@ export const CatalogView: React.FC = () => {
         {activeView === 'categories' ? (
           <div className="space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {displayCategories.map((cat) => (
+              {displayCategories.map((cat, idx) => (
                 <button
                   key={cat.id}
                   type="button"
@@ -347,6 +347,8 @@ export const CatalogView: React.FC = () => {
                       src={cat.image}
                       alt={cat.label}
                       fill
+                      loading="eager"
+                      priority={idx < 4}
                       sizes="(max-width: 768px) 50vw, 16vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />

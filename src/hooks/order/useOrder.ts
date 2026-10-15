@@ -9,14 +9,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { orderService } from '@/services/order/orderService';
 import { queryKeys } from '@/hooks/queryKeys';
 import { useUserStore } from '@/store/user.store';
-import type { ApiResponse, PaginatedResponse } from '@/types/common/api.types';
+import type { ApiResponse } from '@/types/common/api.types';
 import type {
   ValidateCheckoutPayload,
   ValidateCheckoutResponse,
   PlaceOrderPayload,
   PlaceOrderResponse,
   OrderDetails,
-  OrderListItem,
   OrderListParams,
   OrderListResponseData,
   CancelOrderPayload,

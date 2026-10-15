@@ -2,11 +2,12 @@
 
 /**
  * @file OrdersTab.tsx
- * @description Account Orders tab rendering live paginated customer orders, search, status filter, and order inspection.
+ * @description Account Orders tab rendering live paginated customer orders, item previews, financial breakdowns, status filters, and order inspection.
  */
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Search,
   Package,
@@ -15,16 +16,19 @@ import {
   Truck,
   Ban,
   ArrowRight,
-  Filter,
   Eye,
   RefreshCw,
   ShoppingBag,
+  MapPin,
+  Calendar,
+  CreditCard,
+  DollarSign,
 } from 'lucide-react';
 import { useOrdersQuery } from '@/hooks/order/useOrder';
 import { OrderDetailModal } from '@/features/orders/OrderDetailModal';
 import { useUserStore } from '@/store/user.store';
 import { AppRoute } from '@/routes';
-import type { OrderStatus } from '@/types/order/order.types';
+import type { OrderStatus, OrderListItem, OrderItemPreview, OrderItemSnapshot } from '@/types/order/order.types';
 
 const STATUS_FILTERS: Array<{ label: string; value?: OrderStatus }> = [
   { label: 'All Orders' },
@@ -53,8 +57,17 @@ export const OrdersTab: React.FC = () => {
     search: activeSearch || undefined,
   });
 
-  const orders = data?.data?.items || [];
-  const pagination = data?.data?.pagination;
+  // Support both envelope shapes: { data: [ ... ] } and { data: { items: [ ... ] } }
+  const rawData: any = data?.data ?? data;
+  const orders: OrderListItem[] = Array.isArray(rawData)
+    ? rawData
+    : Array.isArray(rawData?.items)
+    ? rawData.items
+    : Array.isArray((data as any)?.items)
+    ? (data as any).items
+    : [];
+
+  const pagination = rawData?.pagination || (data as any)?.pagination;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,19 +86,19 @@ export const OrdersTab: React.FC = () => {
       case 'SHIPPED':
         return {
           icon: Truck,
-          text: 'Shipped',
+          text: 'In Transit',
           classes: 'bg-blue-50 text-blue-800 border-blue-200',
         };
       case 'CONFIRMED':
         return {
-          icon: Package,
+          icon: CheckCircle2,
           text: 'Confirmed',
           classes: 'bg-amber-50 text-amber-800 border-amber-200',
         };
       case 'PROCESSING':
         return {
           icon: Package,
-          text: 'Processing',
+          text: 'Packaging',
           classes: 'bg-amber-50 text-amber-800 border-amber-200',
         };
       case 'CANCELLED':
@@ -112,7 +125,7 @@ export const OrdersTab: React.FC = () => {
             Your Orders
           </h2>
           <p className="text-xs text-[#786C64] mt-0.5">
-            Review your live orders, track parcels, and manage cancellations.
+            Review previous purchases, tracking updates, and invoices.
           </p>
         </div>
 
@@ -226,80 +239,224 @@ export const OrdersTab: React.FC = () => {
 
       {/* Orders List */}
       {isAuthenticated && !isLoading && orders.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {orders.map((order) => {
             const badge = getStatusBadge(order.status);
             const StatusIcon = badge.icon;
-            const currencySymbol = order.currency === 'USD' ? '$' : '₹';
-            const total = order.grandTotal ?? order.totalAmount ?? 0;
+            const currencySymbol = (order.currency === 'USD' || order.currency === '$') ? '$' : '₹';
+
+            // Items list normalization
+            const itemsList: Array<OrderItemPreview | OrderItemSnapshot> =
+              (order.items && order.items.length > 0)
+                ? order.items
+                : (order.itemsPreview && order.itemsPreview.length > 0)
+                ? order.itemsPreview
+                : [];
+
+            // Robust calculation of item total and line item fallbacks
+            const fallbackCalculatedTotal = itemsList.reduce((sum: number, it: any) => {
+              const itemTotal = Number(
+                it.totalPrice ??
+                (Number(it.unitPrice ?? it.price ?? 0) * Number(it.quantity ?? it.qty ?? 1))
+              );
+              return sum + (isNaN(itemTotal) ? 0 : itemTotal);
+            }, 0);
+
+            const rawTotal =
+              order.grandTotal ??
+              order.totalAmount ??
+              order.total ??
+              (order as any).financials?.grandTotal ??
+              order.subtotal ??
+              (order as any).amount;
+
+            const total =
+              rawTotal !== undefined && rawTotal !== null && Number(rawTotal) > 0
+                ? Number(rawTotal)
+                : fallbackCalculatedTotal > 0
+                ? fallbackCalculatedTotal
+                : Number(rawTotal || 0);
+
+            // Item count fallback
+            const fallbackCalculatedCount = itemsList.reduce((sum: number, it: any) => {
+              return sum + Number(it.quantity ?? it.qty ?? 1);
+            }, 0);
+
+            const itemCount =
+              order.itemCount ??
+              order.totalUnits ??
+              (order as any).total_items ??
+              (fallbackCalculatedCount > 0 ? fallbackCalculatedCount : (itemsList.length || 1));
+
+            const orderDateStr = order.createdAt
+              ? new Date(order.createdAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })
+              : 'Recent Order';
+
+            const shippingAddress = order.shippingAddress || order.address;
+            const carrier = order.tracking?.carrier || 'Standard Express';
+            const trackingNum = order.tracking?.trackingNumber;
+            const eta = order.tracking?.estimatedDelivery || '2 - 3 Business Days';
 
             return (
               <div
-                key={order.id}
+                key={order.id || order.orderNumber}
                 className="border border-[#E8E2DA] rounded-2xl p-5 hover:border-[#8C5338]/30 transition-all bg-[#FAF8F5]/40 space-y-4"
               >
-                {/* Header Row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8E2DA] pb-3">
+                {/* 1. Header Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8E2DA] pb-3.5">
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-[#2D2621]">
+                    <span className="text-xs sm:text-sm font-bold text-[#2D2621]">
                       Order #{order.orderNumber}
                     </span>
-                    <span className="text-xs text-[#786C64]">
-                      • {new Date(order.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                    </span>
+                    <span className="text-xs text-[#786C64]">• {orderDateStr}</span>
                   </div>
 
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${badge.classes}`}
-                  >
-                    <StatusIcon className="w-3 h-3" />
-                    <span>{badge.text}</span>
-                  </span>
-                </div>
-
-                {/* Items Preview / Meta Row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="space-y-1">
-                    <span className="text-[#786C64]">
-                      {order.itemCount} {order.itemCount === 1 ? 'item' : 'items'} in this order
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${badge.classes}`}
+                    >
+                      <StatusIcon className="w-3 h-3" />
+                      <span>{badge.text}</span>
                     </span>
+
                     {order.paymentStatus && (
-                      <div className="text-[11px] text-[#786C64]">
-                        Payment Status: <span className="font-semibold text-[#2D2621]">{order.paymentStatus}</span>
-                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#786C64] px-2.5 py-1 rounded-full bg-white border border-[#E8E2DA]">
+                        {order.paymentStatus}
+                      </span>
                     )}
                   </div>
+                </div>
 
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-[#2D2621]">
-                      {currencySymbol}
-                      {total.toLocaleString()}
+                {/* 2. Items List & Thumbnails */}
+                {itemsList.length > 0 ? (
+                  <div className="divide-y divide-[#E8E2DA]/60 space-y-3 pt-1">
+                    {itemsList.map((item: any, idx: number) => {
+                      const itemName =
+                        item.title || item.productName || item.name || 'Premium Sneaker';
+                      const itemImg =
+                        item.thumbnailUrl ||
+                        item.image ||
+                        item.imageUrl ||
+                        '/assets/urbannest/trending-nike-af1.jpg';
+                      const itemQty = Number(item.quantity ?? item.qty ?? 1);
+                      const itemPrice = Number(
+                        item.unitPrice ?? item.price ?? (item.totalPrice ? item.totalPrice / itemQty : 0)
+                      );
+                      const itemTotal = Number(item.totalPrice ?? itemPrice * itemQty);
+
+                      return (
+                        <div key={idx} className="flex items-center gap-4 pt-3 first:pt-0">
+                          {/* Image Thumbnail */}
+                          <div className="relative w-16 h-16 rounded-xl bg-white border border-[#E8E2DA] overflow-hidden p-1.5 shrink-0">
+                            <Image
+                              src={itemImg}
+                              alt={itemName}
+                              fill
+                              sizes="64px"
+                              className="object-contain p-1"
+                              onError={(e: any) => {
+                                e.target.src = '/assets/urbannest/trending-nike-af1.jpg';
+                              }}
+                            />
+                          </div>
+
+                          {/* Item Details */}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-xs sm:text-sm font-bold text-[#2D2621] truncate">
+                              {itemName}
+                            </h3>
+                            <div className="text-[11px] text-[#786C64] mt-0.5 space-x-2">
+                              {item.sku && <span>SKU: {item.sku}</span>}
+                              {item.variantTitle && <span>• {item.variantTitle}</span>}
+                              <span>• Qty: {itemQty}</span>
+                            </div>
+                            <p className="text-xs font-semibold text-[#8C5338] mt-0.5">
+                              {eta ? `Expected arrival: ${eta}` : 'Ready for dispatch'}
+                            </p>
+                          </div>
+
+                          {/* Item Price */}
+                          <div className="text-right shrink-0">
+                            <div className="text-sm font-bold text-[#2D2621]">
+                              {currencySymbol}
+                              {itemTotal.toLocaleString('en-IN')}
+                            </div>
+                            <span className="text-[10px] text-[#786C64]">
+                              {itemQty > 1 ? `${currencySymbol}${itemPrice.toLocaleString()} each` : 'Tax Included'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-white rounded-xl border border-[#E8E2DA] text-xs text-[#786C64] flex items-center justify-between">
+                    <span>{itemCount} {itemCount === 1 ? 'item' : 'items'} in this order</span>
+                    <span className="text-[11px] text-[#8C5338] font-semibold">Standard Delivery</span>
+                  </div>
+                )}
+
+                {/* 3. Address & Logistics Snapshot */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[#E8E2DA]/80 text-xs">
+                  {shippingAddress ? (
+                    <div className="flex items-start gap-2 text-[#786C64]">
+                      <MapPin className="w-4 h-4 text-[#8C5338] shrink-0 mt-0.5" />
+                      <div className="line-clamp-1">
+                        <span className="font-semibold text-[#2D2621]">
+                          {shippingAddress.recipientName || 'Delivery Address'}
+                        </span>
+                        {shippingAddress.city && ` · ${shippingAddress.city}`}
+                        {shippingAddress.state && `, ${shippingAddress.state}`}
+                      </div>
                     </div>
-                    <span className="text-[10px] text-[#786C64]">Total Amount</span>
+                  ) : (
+                    <div className="flex items-center gap-2 text-[#786C64]">
+                      <Calendar className="w-4 h-4 text-[#8C5338] shrink-0" />
+                      <span>Estimated delivery: {eta}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center sm:justify-end gap-2 text-[#786C64]">
+                    <Truck className="w-4 h-4 text-[#8C5338] shrink-0" />
+                    <span>
+                      {carrier} {trackingNum ? `· ${trackingNum}` : ''}
+                    </span>
                   </div>
                 </div>
 
-                {/* Footer Action Row */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E8E2DA]/80">
-                  <Link
-                    href={AppRoute.ORDER_TRACK(order.orderNumber)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E8E2DA] hover:bg-white text-xs font-semibold text-[#2D2621] transition-colors cursor-pointer"
-                  >
-                    <Truck className="w-3.5 h-3.5 text-[#8C5338]" />
-                    <span>Track</span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedOrderId(order.id)}
-                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#8C5338] hover:bg-[#6E3F29] text-white text-xs font-semibold transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>View Details</span>
-                  </button>
+                {/* 4. Footer Row: Total & Action Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#E8E2DA]">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xs text-[#786C64]">Order Total:</span>
+                    <span className="text-base sm:text-lg font-bold text-[#2D2621]">
+                      {currencySymbol}
+                      {total.toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-[10px] text-[#786C64]">({itemCount} items)</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={AppRoute.ORDER_TRACK(order.orderNumber)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#E8E2DA] hover:bg-white text-xs font-semibold text-[#2D2621] transition-colors cursor-pointer"
+                    >
+                      <Truck className="w-3.5 h-3.5 text-[#8C5338]" />
+                      <span>Track Package</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderId(order.id || order.orderNumber)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#8C5338] hover:bg-[#6E3F29] text-white text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View Details</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -309,7 +466,7 @@ export const OrdersTab: React.FC = () => {
           {pagination && pagination.totalPages > 1 && (
             <div className="flex items-center justify-between pt-4 border-t border-[#E8E2DA] text-xs">
               <span className="text-[#786C64]">
-                Page {pagination.page} of {pagination.totalPages} ({pagination.total} total orders)
+                Page {pagination.page} of {pagination.totalPages} ({pagination.totalOrders || pagination.total} total orders)
               </span>
 
               <div className="flex items-center gap-2">

@@ -20,6 +20,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useOrderByIdQuery, useCancelOrderMutation } from '@/hooks/order/useOrder';
 import { AppRoute } from '@/routes';
 import type { OrderStatus } from '@/types/order/order.types';
@@ -242,24 +243,54 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </h4>
 
                 <div className="divide-y divide-[#E8E2DA] border border-[#E8E2DA] rounded-2xl overflow-hidden bg-white">
-                  {order.items?.map((item) => (
-                    <div key={item.id} className="p-3.5 sm:p-4 flex items-center justify-between gap-3 text-xs">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-[#2D2621] truncate">
-                          {item.productName || item.title || 'Product Item'}
-                        </div>
-                        <div className="text-[11px] text-[#786C64] mt-0.5">
-                          {item.sku ? `SKU: ${item.sku} • ` : ''}Qty: {item.quantity} × {currencySymbol}
-                          {(item.unitPrice || 0).toLocaleString()}
-                        </div>
-                      </div>
+                  {order.items?.map((item: any) => {
+                    const itemImg =
+                      item.thumbnailUrl ||
+                      item.image ||
+                      item.imageUrl ||
+                      '/assets/urbannest/trending-nike-af1.jpg';
+                    const itemName =
+                      item.productName || item.title || item.name || 'Product Item';
+                    const itemQty = Number(item.quantity ?? item.qty ?? 1);
+                    const itemPrice = Number(item.unitPrice ?? item.price ?? 0);
+                    const itemTotal = Number(item.totalPrice ?? itemPrice * itemQty);
 
-                      <div className="font-bold text-[#2D2621] text-sm shrink-0">
-                        {currencySymbol}
-                        {(item.totalPrice || item.unitPrice * item.quantity).toLocaleString()}
+                    return (
+                      <div key={item.id} className="p-3.5 sm:p-4 flex items-center gap-4 text-xs">
+                        <div className="relative w-14 h-14 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] overflow-hidden p-1 shrink-0">
+                          <Image
+                            src={itemImg}
+                            alt={itemName}
+                            fill
+                            sizes="56px"
+                            className="object-contain p-1"
+                            onError={(e: any) => {
+                              e.target.src = '/assets/urbannest/trending-nike-af1.jpg';
+                            }}
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-[#2D2621] truncate">
+                            {itemName}
+                          </div>
+                          <div className="text-[11px] text-[#786C64] mt-0.5 space-x-2">
+                            {item.sku && <span>SKU: {item.sku}</span>}
+                            {item.variantTitle && <span>• {item.variantTitle}</span>}
+                            <span>• Qty: {itemQty} × {currencySymbol}{itemPrice.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        <div className="font-bold text-[#2D2621] text-sm shrink-0 text-right">
+                          <div>
+                            {currencySymbol}
+                            {itemTotal.toLocaleString()}
+                          </div>
+                          <span className="text-[10px] text-[#786C64]">Tax Included</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

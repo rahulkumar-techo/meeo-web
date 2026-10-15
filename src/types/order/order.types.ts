@@ -192,21 +192,47 @@ export interface OrderListParams extends PaginationParams {
   endDate?: string;
 }
 
+export interface OrderItemPreview {
+  title?: string;
+  productName?: string;
+  name?: string;
+  quantity?: number;
+  qty?: number;
+  price?: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  thumbnailUrl?: string;
+  image?: string;
+  imageUrl?: string;
+  sku?: string;
+  variantTitle?: string;
+}
+
 export interface OrderListItem {
   id: string;
   orderNumber: string;
   status: OrderStatus;
   paymentStatus?: PaymentStatus;
-  grandTotal: number;
+  paymentMethod?: string;
+  grandTotal?: number;
   totalAmount?: number;
-  currency: string;
-  itemCount: number;
+  total?: number;
+  subtotal?: number;
+  discountTotal?: number;
+  discountAmount?: number;
+  shippingTotal?: number;
+  shippingFee?: number;
+  taxTotal?: number;
+  taxAmount?: number;
+  currency?: string;
+  itemCount?: number;
+  totalUnits?: number;
   createdAt: string;
-  itemsPreview?: Array<{
-    title: string;
-    quantity: number;
-    thumbnailUrl?: string;
-  }>;
+  itemsPreview?: OrderItemPreview[];
+  items?: OrderItemSnapshot[];
+  shippingAddress?: OrderAddress | Partial<SavedAddress>;
+  address?: OrderAddress;
+  tracking?: OrderTrackingInfo;
 }
 
 export interface OrderListResponseData {

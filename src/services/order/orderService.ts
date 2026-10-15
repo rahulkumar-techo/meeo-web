@@ -5,14 +5,13 @@
 
 import { apiClient } from '@/config/client';
 import { ApiRoute } from '@/routes';
-import type { ApiResponse, PaginatedResponse } from '@/types/common/api.types';
+import type { ApiResponse } from '@/types/common/api.types';
 import type {
   ValidateCheckoutPayload,
   ValidateCheckoutResponse,
   PlaceOrderPayload,
   PlaceOrderResponse,
   OrderDetails,
-  OrderListItem,
   OrderListParams,
   OrderListResponseData,
   CancelOrderPayload,

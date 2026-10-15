@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/store/user.store';
 import { OrdersTab } from '@/features/account/OrdersTab';
+import { AppRoute } from '@/routes';
 
 const SAVED_ADDRESSES = [
   {
@@ -47,6 +48,19 @@ const SAVED_ADDRESSES = [
 
 export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<'orders' | 'addresses' | 'payments' | 'profile'>('orders');
+  const { user, isAuthenticated } = useUserStore();
+
+  const displayName = user
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email.split('@')[0]
+    : 'Guest Explorer';
+  const displayEmail = user?.email || 'Sign in to access orders and saved addresses';
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .filter(Boolean)
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || 'UN';
 
   return (
     <div className="w-full min-h-screen bg-[#FAF8F5] py-8 sm:py-12">
@@ -66,34 +80,43 @@ export default function AccountPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-[#EFEAE4] border border-[#E5DFD7] flex items-center justify-center text-[#8C5338] font-serif text-2xl font-bold">
-                RK
+                {initials}
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D2621]">
-                    Rahul Kumar
+                    {displayName}
                   </h1>
                   <span className="px-2.5 py-0.5 rounded-full bg-[#8C5338]/10 text-[#8C5338] text-[10px] font-bold uppercase tracking-wider">
-                    Nest Member
+                    {isAuthenticated ? 'Nest Member' : 'Guest'}
                   </span>
                 </div>
                 <p className="text-xs text-[#786C64] mt-0.5">
-                  rahul.kumar@example.com • Member since 2024
+                  {displayEmail}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 bg-[#FAF8F5] px-4 py-3 rounded-2xl border border-[#E8E2DA]">
-              <div>
-                <div className="text-[10px] uppercase font-bold text-[#786C64]">Reward Points</div>
-                <div className="text-lg font-bold text-[#2D2621]">1,450 pts</div>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-4 bg-[#FAF8F5] px-4 py-3 rounded-2xl border border-[#E8E2DA]">
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-[#786C64]">Reward Points</div>
+                  <div className="text-lg font-bold text-[#2D2621]">1,450 pts</div>
+                </div>
+                <div className="h-8 w-px bg-[#E8E2DA]" />
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-[#786C64]">Tier Status</div>
+                  <div className="text-xs font-bold text-[#8C5338]">Gold Access</div>
+                </div>
               </div>
-              <div className="h-8 w-px bg-[#E8E2DA]" />
-              <div>
-                <div className="text-[10px] uppercase font-bold text-[#786C64]">Tier Status</div>
-                <div className="text-xs font-bold text-[#8C5338]">Gold Access</div>
-              </div>
-            </div>
+            ) : (
+              <Link
+                href={AppRoute.AUTH.LOGIN_WITH_REDIRECT(AppRoute.ACCOUNT)}
+                className="px-5 py-2.5 rounded-xl bg-[#8C5338] hover:bg-[#6E3F29] text-white text-xs font-bold uppercase tracking-wider transition-colors"
+              >
+                Sign In to Account
+              </Link>
+            )}
           </div>
         </div>
 

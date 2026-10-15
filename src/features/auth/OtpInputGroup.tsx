@@ -15,17 +15,15 @@ export const OtpInputGroup: React.FC<OtpInputGroupProps> = ({
   value,
   onChange,
   onComplete,
-  length = 6,
+  length = 4,
   disabled = false,
   error = false,
 }) => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Split value into array of characters
   const digits = Array.from({ length }, (_, i) => value[i] || '');
 
   useEffect(() => {
-    // Auto focus first input on mount if empty
     if (!value && inputRefs.current[0]) {
       inputRefs.current[0].focus();
     }
@@ -34,7 +32,6 @@ export const OtpInputGroup: React.FC<OtpInputGroupProps> = ({
   const handleChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, '');
     if (!rawVal) {
-      // Empty / cleared
       const updated = digits.slice();
       updated[index] = '';
       const newOtp = updated.join('');
@@ -42,19 +39,16 @@ export const OtpInputGroup: React.FC<OtpInputGroupProps> = ({
       return;
     }
 
-    // Single digit input
     const char = rawVal[rawVal.length - 1];
     const updated = [...digits];
     updated[index] = char;
     const newOtp = updated.join('');
     onChange(newOtp);
 
-    // Auto advance focus to next input
     if (index < length - 1) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // If all digits filled, fire onComplete
     if (newOtp.length === length) {
       onComplete?.(newOtp);
     }
@@ -63,7 +57,6 @@ export const OtpInputGroup: React.FC<OtpInputGroupProps> = ({
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
       if (!digits[index] && index > 0) {
-        // Move backward and clear
         inputRefs.current[index - 1]?.focus();
         const updated = [...digits];
         updated[index - 1] = '';
@@ -93,7 +86,7 @@ export const OtpInputGroup: React.FC<OtpInputGroupProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 sm:gap-3 w-full max-w-sm mx-auto">
+    <div className="flex items-center justify-center gap-3 sm:gap-4 w-full max-w-xs mx-auto">
       {digits.map((digit, idx) => {
         const isFilled = Boolean(digit);
         return (
@@ -106,23 +99,18 @@ export const OtpInputGroup: React.FC<OtpInputGroupProps> = ({
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={1}
-            disabled={disabled}
             value={digit}
+            disabled={disabled}
             onChange={(e) => handleChange(idx, e)}
             onKeyDown={(e) => handleKeyDown(idx, e)}
             onPaste={handlePaste}
-            onFocus={(e) => e.target.select()}
-            className={`w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-black rounded-2xl border transition-all duration-200 outline-none
-              ${
-                error
-                  ? 'border-red-500 text-red-600 bg-red-50/50 dark:bg-red-950/20 focus:ring-4 focus:ring-red-200 dark:focus:ring-red-900/40'
-                  : isFilled
-                  ? 'border-[#412ce7] bg-[#eaedff]/30 dark:bg-[#1e273d] text-[#131b2e] dark:text-white shadow-xs font-mono'
-                  : 'border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#131826] text-[#131b2e] dark:text-white hover:border-[#777588]'
-              }
-              focus:border-[#412ce7] focus:ring-4 focus:ring-[#412ce7]/20 focus:bg-white dark:focus:bg-[#182032]
-              disabled:opacity-50 disabled:cursor-not-allowed
-            `}
+            className={`w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-bold rounded-2xl border transition-all outline-none ${
+              error
+                ? 'border-red-500 bg-red-50/50 text-red-600 ring-2 ring-red-500/20'
+                : isFilled
+                ? 'border-[#8C5338] bg-[#EFEAE4] text-[#2D2621] shadow-2xs'
+                : 'border-[#E8E2DA] bg-[#FAF8F5] text-[#2D2621] focus:border-[#8C5338] focus:ring-2 focus:ring-[#8C5338]/20'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
             aria-label={`Digit ${idx + 1}`}
           />
         );

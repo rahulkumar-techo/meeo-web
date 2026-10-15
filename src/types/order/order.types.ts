@@ -34,47 +34,59 @@ export interface StockIssue {
 
 export interface CheckoutSummary {
   itemCount: number;
+  totalUnits?: number;
   subtotal: number;
   discountTotal: number;
-  shippingFee: number;
+  shippingFee?: number;
+  shippingTotal?: number;
   taxTotal: number;
   grandTotal: number;
+  currency?: string;
 }
 
 export interface ValidateCheckoutPayload {
   cartId?: string;
   shippingAddress?: Partial<SavedAddress>;
   shippingAddressId?: string;
+  billingAddressId?: string;
   couponCode?: string;
   currency?: string;
 }
 
 export interface ValidateCheckoutResponse {
   isValid: boolean;
-  currency: string;
+  currency?: string;
   summary: CheckoutSummary;
   coupon?: {
     code: string;
-    applied: boolean;
+    type?: string;
+    applied?: boolean;
     discountAmount: number;
-    freeShippingApplied: boolean;
+    freeShippingApplied?: boolean;
   };
+  shippingAddress?: Partial<SavedAddress>;
   items: Array<{
     variantId: string;
-    productTitle: string;
+    productName?: string;
+    productTitle?: string;
+    sku?: string;
     quantity: number;
     unitPrice: number;
-    lineTotal: number;
-    isAvailable: boolean;
-    currentStock: number;
+    totalPrice?: number;
+    lineTotal?: number;
+    isAvailable?: boolean;
+    currentStock?: number;
   }>;
-  stockIssues: StockIssue[];
+  stockIssues?: StockIssue[];
 }
 
 export interface PlaceOrderPayload {
   cartId?: string;
   shippingAddressId?: string;
   shippingAddress?: Partial<SavedAddress>;
+  billingAddressId?: string;
+  billingAddress?: Partial<SavedAddress>;
+  paymentMethod?: 'UPI' | 'COD' | 'CARD' | 'NETBANKING' | string;
   couponCode?: string;
   notes?: string;
   currency?: string;
@@ -132,8 +144,23 @@ export interface OrderNextStep {
 }
 
 export interface PlaceOrderResponse {
-  order: OrderDetails;
+  order?: OrderDetails;
   nextStep?: OrderNextStep;
+  id?: string;
+  orderNumber?: string;
+  status?: OrderStatus;
+  paymentMethod?: string;
+  paymentStatus?: PaymentStatus;
+  financials?: {
+    subtotal?: number;
+    discountTotal?: number;
+    taxTotal?: number;
+    shippingTotal?: number;
+    grandTotal?: number;
+    currency?: string;
+  };
+  items?: any[];
+  createdAt?: string;
 }
 
 export interface OrderListParams extends PaginationParams {

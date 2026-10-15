@@ -5,4 +5,14 @@
 
 export * from '@/types/auth/auth.types';
 export * from '@/types/common/api.types';
-export type RegisterPayload = import('@/types/auth/auth.types').SignupPayload;
+export type {
+  GoogleSignInPayload,
+  VerifyResetOtpPayload,
+  SetPasswordPayload,
+  ChangePasswordPayload,
+  LinkGooglePayload,
+  AuthProviderType,
+  AuthAccount,
+  UserSessionDevice,
+} from '@/services/auth/auth.type';
+export type RegisterPayload = import('@/services/auth/auth.type').RegisterPayload;

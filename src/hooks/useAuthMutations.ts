@@ -4,5 +4,5 @@
  */
 
 export * from './auth/useAuth';
-export { useSignupMutation as useRegisterMutation } from './auth/useAuth';
+export { useRegisterMutation, useSignupMutation } from './auth/useAuth';
 export { queryKeys as AUTH_KEYS } from './queryKeys';

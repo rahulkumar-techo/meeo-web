@@ -42,8 +42,13 @@ export const CartItemList: React.FC<CartItemListProps> = ({
               className="w-20 h-20 rounded-xl overflow-hidden bg-[#f2f3ff] shrink-0 border border-[#e2e7ff]"
             >
               <img
-                src={item.product.images[0]}
-                alt={item.product.name}
+                src={
+                  (Array.isArray(item.product?.images) && item.product.images[0]) ||
+                  (item.product as any)?.image ||
+                  (item.product as any)?.thumbnail ||
+                  '/assets/urbannest/trending-nike-af1.jpg'
+                }
+                alt={item.product?.name || 'Product'}
                 className="w-full h-full object-cover"
               />
             </Link>

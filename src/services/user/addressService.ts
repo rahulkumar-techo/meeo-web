@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/config/client';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse } from '@/types/common/api.types';
 import type {
   SavedAddress,
@@ -17,7 +18,7 @@ export const addressService = {
    */
   async getAddresses(): Promise<ApiResponse<SavedAddress[]>> {
     try {
-      const response = await apiClient.get<ApiResponse<SavedAddress[]>>('/user/addresses');
+      const response = await apiClient.get<ApiResponse<SavedAddress[]>>(ApiRoute.USER.ADDRESSES);
       return response.data;
     } catch {
       return { success: true, data: [] };
@@ -28,7 +29,10 @@ export const addressService = {
    * Add a new saved address.
    */
   async createAddress(payload: CreateAddressPayload): Promise<ApiResponse<SavedAddress>> {
-    const response = await apiClient.post<ApiResponse<SavedAddress>>('/user/addresses', payload);
+    const response = await apiClient.post<ApiResponse<SavedAddress>>(
+      ApiRoute.USER.ADDRESSES,
+      payload
+    );
     return response.data;
   },
 
@@ -40,7 +44,7 @@ export const addressService = {
     payload: UpdateAddressPayload
   ): Promise<ApiResponse<SavedAddress>> {
     const response = await apiClient.patch<ApiResponse<SavedAddress>>(
-      `/user/addresses/${addressId}`,
+      ApiRoute.USER.UPDATE_ADDRESS(addressId),
       payload
     );
     return response.data;
@@ -50,7 +54,9 @@ export const addressService = {
    * Delete a saved address.
    */
   async deleteAddress(addressId: string): Promise<ApiResponse<null>> {
-    const response = await apiClient.delete<ApiResponse<null>>(`/user/addresses/${addressId}`);
+    const response = await apiClient.delete<ApiResponse<null>>(
+      ApiRoute.USER.DELETE_ADDRESS(addressId)
+    );
     return response.data;
   },
 };

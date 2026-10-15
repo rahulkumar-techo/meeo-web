@@ -16,12 +16,12 @@ interface CheckoutStepsProps {
   onPaymentMethodChange: (pm: PaymentMethod['type']) => void;
   upiId: string;
   onUpiIdChange: (v: string) => void;
-  cardNumber: string;
-  onCardNumberChange: (v: string) => void;
-  cardExpiry: string;
-  onCardExpiryChange: (v: string) => void;
-  cardCvv: string;
-  onCardCvvChange: (v: string) => void;
+  cardNumber?: string;
+  onCardNumberChange?: (v: string) => void;
+  cardExpiry?: string;
+  onCardExpiryChange?: (v: string) => void;
+  cardCvv?: string;
+  onCardCvvChange?: (v: string) => void;
 }
 
 export const CheckoutSteps: React.FC<CheckoutStepsProps> = ({

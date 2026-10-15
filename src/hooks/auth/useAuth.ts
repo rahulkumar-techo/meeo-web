@@ -1,181 +1,359 @@
-'use client';
+"use client"
 
-/**
- * @file useAuth.ts
- * @description Authentication and customer session queries & mutations with TanStack Query caching.
- */
-
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { authService } from '@/services/auth/authService';
-import { queryKeys } from '@/hooks/queryKeys';
-import { useUserStore } from '@/store/user.store';
-import type { ApiResponse } from '@/types/common/api.types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { authService } from "@/services/auth/authService"
+import { useUserStore } from "@/store/user.store"
 import type {
-  AuthUser,
-  CsrfResponse,
   LoginPayload,
-  SignupPayload,
+  RegisterPayload,
   VerifyOtpPayload,
   ResendOtpPayload,
   ForgotPasswordPayload,
   ResetPasswordPayload,
-  AuthResponseData,
-} from '@/types/auth/auth.types';
+  VerifyResetOtpPayload,
+  GoogleSignInPayload,
+  SetPasswordPayload,
+  ChangePasswordPayload,
+  LinkGooglePayload,
+  AuthProviderType,
+  AuthAccount,
+  UserSessionDevice,
+} from "@/services/auth/auth.type"
+
+import { queryKeys } from "@/hooks/queryKeys"
+
+export const AUTH_QUERY_KEY = queryKeys.auth.currentUser()
 
 /**
- * Fetch current authenticated user profile (/auth/me).
- * Stale time: 5 mins, GC time: 30 mins.
+ * Hook to query and cache current authenticated user profile using TanStack Query.
  */
 export function useCurrentUserQuery() {
-  const storeUser = useUserStore((s) => s.user);
-  const isAuthenticated = useUserStore((s) => s.isAuthenticated);
-  const setUser = useUserStore((s) => s.setUser);
+  const { isAuthenticated, setUser } = useUserStore()
 
-  return useQuery<AuthUser | null>({
-    queryKey: queryKeys.auth.me(),
+  return useQuery({
+    queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       try {
-        const res = await authService.getMe();
+        const res = await authService.getMe()
         if (res.success && res.data) {
-          setUser(res.data);
-          return res.data;
+          setUser(res.data)
+          return res.data
         }
-        return null;
-      } catch {
-        return null;
+        return null
+      } catch (err) {
+        // Return null gracefully without failing entire page rendering
+        return null
       }
     },
-    enabled: isAuthenticated,
-    initialData: storeUser,
+    enabled: Boolean(isAuthenticated),
     staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-  });
+    retry: false,
+  })
 }
 
-/**
- * Fetch or refresh CSRF protection token.
- */
-export function useCsrfQuery() {
-  return useQuery<CsrfResponse>({
-    queryKey: queryKeys.auth.csrf(),
-    queryFn: () => authService.getCsrfToken(),
-    staleTime: 10 * 60 * 1000,
-  });
-}
 
 /**
- * Authenticate customer with email and password.
+ * Mutation for user login.
  */
 export function useLoginMutation() {
-  const queryClient = useQueryClient();
-  const setAuth = useUserStore((s) => s.setAuth);
+  const queryClient = useQueryClient()
+  const { setAuth } = useUserStore()
 
-  return useMutation<ApiResponse<AuthResponseData>, Error, LoginPayload>({
-    mutationFn: (payload) => authService.login(payload),
-    onSuccess: (res) => {
-      if (res.data?.user && res.data?.accessToken) {
-        setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
-        queryClient.setQueryData(queryKeys.auth.me(), res.data.user);
-        queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
-        queryClient.invalidateQueries({ queryKey: queryKeys.cart.all });
-        queryClient.invalidateQueries({ queryKey: queryKeys.wishlist.all });
+  return useMutation({
+    mutationFn: async (payload: LoginPayload) => {
+      return await authService.login(payload)
+    },
+    onSuccess: (response: any) => {
+      const data = response?.data || response
+      const user = data?.user || (data?.email ? data : null)
+      const accessToken = data?.accessToken
+
+      if (user) {
+        setAuth(user, accessToken)
+        queryClient.setQueryData(AUTH_QUERY_KEY, user)
       }
     },
-  });
+  })
 }
-
 /**
- * Register a new customer account.
+ * Mutation for user login with google.
  */
-export function useSignupMutation() {
-  const queryClient = useQueryClient();
-  const setAuth = useUserStore((s) => s.setAuth);
+export function useSignInWithGoogle() {
+  const queryClient = useQueryClient()
+  const { setAuth } = useUserStore()
 
-  return useMutation<ApiResponse<AuthResponseData>, Error, SignupPayload>({
-    mutationFn: (payload) => authService.signup(payload),
-    onSuccess: (res) => {
-      if (res.data?.user && res.data?.accessToken) {
-        setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
-        queryClient.setQueryData(queryKeys.auth.me(), res.data.user);
-      }
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+  return useMutation({
+    mutationFn: async (payload: GoogleSignInPayload) => {
+      return await authService.SignInWithGoogle(payload)
     },
-  });
+    onSuccess: (response: any) => {
+      const data = response?.data || response
+      const user = data?.user || (data?.email ? data : null)
+      const accessToken = data?.accessToken
+
+      if (user) {
+        setAuth(user, accessToken)
+        queryClient.setQueryData(AUTH_QUERY_KEY, user)
+      }
+    },
+  })
 }
 
 /**
- * Verify 6-digit OTP verification passcode.
+ * Mutation for Route 1: POST /api/v1/auth/register
+ * - Registers new account or refreshes unverified user details & OTP.
+ */
+export function useRegisterMutation() {
+  return useMutation({
+    mutationFn: async (payload: RegisterPayload) => {
+      return await authService.register(payload)
+    },
+  })
+}
+
+export const useSignupMutation = useRegisterMutation;
+
+/**
+ * Mutation for Route 2: POST /api/v1/auth/verify-otp
+ * - Validates account activation code against Keys.USER_OTP(email).
  */
 export function useVerifyOtpMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation<ApiResponse<null>, Error, VerifyOtpPayload>({
-    mutationFn: (payload) => authService.verifyOtp(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+  return useMutation({
+    mutationFn: async (payload: VerifyOtpPayload) => {
+      return await authService.verifyOtp(payload)
     },
-  });
+  })
 }
 
 /**
- * Resend verification OTP code.
+ * Mutation for Route 3: POST /api/v1/auth/resend-otp
+ * - Resends account activation OTP (Keys.USER_OTP) for /verify-otp screen.
+ * - Rejects with 404 if user not found, 400 if already verified.
  */
 export function useResendOtpMutation() {
-  return useMutation<ApiResponse<null>, Error, ResendOtpPayload>({
-    mutationFn: (payload) => authService.resendOtp(payload),
-  });
+  return useMutation({
+    mutationFn: async (payload: ResendOtpPayload) => {
+      return await authService.resendOtp(payload)
+    },
+  })
 }
 
 /**
- * Request password reset email.
+ * Mutation for Route 4: POST /api/v1/auth/forgot-password
+ * - Sends or resends password recovery code against Keys.PASSWORD_RESET_OTP(email).
+ * - Used on /forgot-password AND as resend in Step 1 of /reset-password.
  */
 export function useForgotPasswordMutation() {
-  return useMutation<ApiResponse<null>, Error, ForgotPasswordPayload>({
-    mutationFn: (payload) => authService.forgotPassword(payload),
-  });
+  return useMutation({
+    mutationFn: async (payload: ForgotPasswordPayload) => {
+      return await authService.forgotPassword(payload)
+    },
+  })
 }
 
 /**
- * Reset password with OTP and new password.
+ * Mutation for Route 5: POST /api/v1/auth/verify-reset-otp
+ * - Non-destructive validation of Keys.PASSWORD_RESET_OTP(email) in Step 1 of /reset-password.
+ */
+export function useVerifyResetOtpMutation() {
+  return useMutation({
+    mutationFn: async (payload: VerifyResetOtpPayload) => {
+      return await authService.verifyResetOtp(payload)
+    },
+  })
+}
+
+/**
+ * Mutation for Route 6: POST /api/v1/auth/reset-password
+ * - Finalizes password reset with verified OTP and revokes all active sessions.
  */
 export function useResetPasswordMutation() {
-  return useMutation<ApiResponse<null>, Error, ResetPasswordPayload>({
-    mutationFn: (payload) => authService.resetPassword(payload),
-  });
+  return useMutation({
+    mutationFn: async (payload: ResetPasswordPayload) => {
+      return await authService.resetPassword(payload)
+    },
+  })
 }
 
 /**
- * Invalidate session and clear auth cache.
+ * Mutation for user logout (current device).
  */
 export function useLogoutMutation() {
-  const queryClient = useQueryClient();
-  const logout = useUserStore((s) => s.logout);
+  const queryClient = useQueryClient()
+  const { logout } = useUserStore()
 
-  return useMutation<ApiResponse<null>, Error, void>({
-    mutationFn: () => authService.logout(),
-    onSettled: () => {
-      logout();
-      queryClient.setQueryData(queryKeys.auth.me(), null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.cart.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.wishlist.all });
+  return useMutation({
+    mutationFn: async () => {
+      return await authService.logout()
     },
-  });
+    onSettled: () => {
+      logout()
+      queryClient.removeQueries({ queryKey: AUTH_QUERY_KEY })
+      queryClient.clear()
+    },
+  })
 }
 
 /**
- * Invalidate all customer sessions across devices.
+ * Mutation for global user logout from all connected devices.
  */
 export function useLogoutAllMutation() {
-  const queryClient = useQueryClient();
-  const logout = useUserStore((s) => s.logout);
+  const queryClient = useQueryClient()
+  const { logout } = useUserStore()
 
-  return useMutation<ApiResponse<null>, Error, void>({
-    mutationFn: () => authService.logoutAll(),
-    onSettled: () => {
-      logout();
-      queryClient.setQueryData(queryKeys.auth.me(), null);
-      queryClient.clear();
+  return useMutation({
+    mutationFn: async () => {
+      return await authService.logoutAll()
     },
-  });
+    onSettled: () => {
+      logout()
+      queryClient.removeQueries({ queryKey: AUTH_QUERY_KEY })
+      queryClient.clear()
+    },
+  })
 }
+
+export const AUTH_ACCOUNTS_QUERY_KEY = queryKeys.auth.accounts()
+export const AUTH_SESSIONS_QUERY_KEY = queryKeys.auth.sessions()
+
+/**
+ * Hook to retrieve linked authentication accounts (PASSWORD, GOOGLE, etc.).
+ */
+export function useAuthAccountsQuery(enabled = true) {
+  const { isAuthenticated } = useUserStore()
+
+  return useQuery({
+    queryKey: AUTH_ACCOUNTS_QUERY_KEY,
+    queryFn: async (): Promise<AuthAccount[]> => {
+      const res = await authService.getAuthAccounts()
+      return res.data?.accounts || []
+    },
+    enabled: enabled && Boolean(isAuthenticated),
+    staleTime: 60 * 1000,
+  })
+}
+
+/**
+ * Mutation to add/set a password for accounts registered via Google OAuth.
+ */
+export function useSetPasswordMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: SetPasswordPayload) => {
+      return await authService.setPassword(payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: AUTH_ACCOUNTS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+    },
+  })
+}
+
+/**
+ * Mutation to change current password (revokes all other concurrent sessions).
+ */
+export function useChangePasswordMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: ChangePasswordPayload) => {
+      return await authService.changePassword(payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: AUTH_ACCOUNTS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: AUTH_SESSIONS_QUERY_KEY })
+    },
+  })
+}
+
+/**
+ * Mutation to link a Google account to the active profile.
+ */
+export function useLinkGoogleMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: LinkGooglePayload) => {
+      return await authService.linkGoogle(payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: AUTH_ACCOUNTS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+    },
+  })
+}
+
+/**
+ * Mutation to unlink an authentication provider (PASSWORD or GOOGLE).
+ * Fails with 400 if user only has 1 method remaining.
+ */
+export function useUnlinkProviderMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (provider: AuthProviderType) => {
+      return await authService.unlinkProvider(provider)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: AUTH_ACCOUNTS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+    },
+  })
+}
+
+/**
+ * Hook to retrieve active login sessions for the currently logged-in user.
+ */
+export function useCurrentUserSessionsQuery(enabled = true) {
+  const { isAuthenticated } = useUserStore()
+
+  return useQuery({
+    queryKey: AUTH_SESSIONS_QUERY_KEY,
+    queryFn: async (): Promise<UserSessionDevice[]> => {
+      const res = await authService.getSessions()
+      const data = res.data
+      if (Array.isArray(data)) return data
+      return data?.sessions || []
+    },
+    enabled: enabled && Boolean(isAuthenticated),
+    staleTime: 30 * 1000,
+  })
+}
+
+/**
+ * Mutation to revoke a single specific active session.
+ */
+export function useRevokeCurrentUserSessionMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      return await authService.revokeSession(sessionId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: AUTH_SESSIONS_QUERY_KEY })
+    },
+  })
+}
+
+/**
+ * Mutation to revoke all active sessions across all devices.
+ */
+export function useRevokeAllCurrentUserSessionsMutation() {
+  const queryClient = useQueryClient()
+  const { logout } = useUserStore()
+
+  return useMutation({
+    mutationFn: async () => {
+      return await authService.revokeAllSessions()
+    },
+    onSettled: () => {
+      logout()
+      queryClient.removeQueries({ queryKey: AUTH_QUERY_KEY })
+      queryClient.clear()
+    },
+  })
+}
+
+

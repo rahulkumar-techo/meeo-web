@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/config/client';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse, PaginatedResponse } from '@/types/common/api.types';
 import type {
   ReviewItem,
@@ -25,7 +26,7 @@ export const reviewService = {
     params?: ReviewListParams
   ): Promise<PaginatedResponse<ReviewItem>> {
     const response = await apiClient.get<PaginatedResponse<ReviewItem>>(
-      `/reviews/products/${productId}`,
+      ApiRoute.REVIEWS.PRODUCT_REVIEWS(productId),
       { params }
     );
     return response.data;
@@ -38,7 +39,7 @@ export const reviewService = {
     productId: string
   ): Promise<ApiResponse<ReviewRatingSummary>> {
     const response = await apiClient.get<ApiResponse<ReviewRatingSummary>>(
-      `/reviews/products/${productId}/summary`
+      ApiRoute.REVIEWS.PRODUCT_REVIEWS_SUMMARY(productId)
     );
     return response.data;
   },
@@ -50,7 +51,7 @@ export const reviewService = {
     payload: SubmitReviewPayload
   ): Promise<ApiResponse<SubmitReviewResponse>> {
     const response = await apiClient.post<ApiResponse<SubmitReviewResponse>>(
-      '/reviews',
+      ApiRoute.REVIEWS.REVIEWS,
       payload
     );
     return response.data;
@@ -61,7 +62,7 @@ export const reviewService = {
    */
   async getMyReviews(): Promise<ApiResponse<CustomerReviewItem[]>> {
     const response = await apiClient.get<ApiResponse<CustomerReviewItem[]>>(
-      '/reviews/my-reviews'
+      ApiRoute.REVIEWS.GET_MY_REVIEWS
     );
     return response.data;
   },
@@ -74,7 +75,7 @@ export const reviewService = {
     payload: UpdateReviewPayload
   ): Promise<ApiResponse<ReviewItem>> {
     const response = await apiClient.put<ApiResponse<ReviewItem>>(
-      `/reviews/${id}`,
+      ApiRoute.REVIEWS.UPDATE_REVIEWS(id),
       payload
     );
     return response.data;
@@ -84,7 +85,9 @@ export const reviewService = {
    * Delete customer's own review.
    */
   async deleteReview(id: string): Promise<ApiResponse<null>> {
-    const response = await apiClient.delete<ApiResponse<null>>(`/reviews/${id}`);
+    const response = await apiClient.delete<ApiResponse<null>>(
+      ApiRoute.REVIEWS.DELETE_REVIEWS(id)
+    );
     return response.data;
   },
 
@@ -96,7 +99,7 @@ export const reviewService = {
     payload: ReportReviewPayload
   ): Promise<ApiResponse<null>> {
     const response = await apiClient.post<ApiResponse<null>>(
-      `/reviews/${id}/report`,
+      ApiRoute.REVIEWS.REPORT(id),
       payload
     );
     return response.data;

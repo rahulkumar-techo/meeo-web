@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, ShieldCheck, Zap, ArrowUpRight, Box, Compass } from 'lucide-react';
+import Image from 'next/image';
+import { Sparkles, ShieldCheck, Zap, Package, Award } from 'lucide-react';
 
 interface AuthVisualSideProps {
   heading?: string;
@@ -10,101 +11,100 @@ interface AuthVisualSideProps {
 }
 
 export const AuthVisualSide: React.FC<AuthVisualSideProps> = ({
-  heading = 'Tactile Commerce for Discerning Collectors.',
-  subheading = 'Unlock member-exclusive drops, archival hardware pre-orders, express studio dispatches, and private showroom events.',
-  badge = 'Studio Identity Access',
+  heading = 'Every Step Begins With Exclusive Access.',
+  subheading = 'Sign in to unlock curated member drops, private archive pricing, live order tracking, and complimentary priority delivery.',
+  badge = 'UrbanNest Member Access',
 }) => {
   return (
-    <div className="relative hidden lg:flex flex-col justify-between p-10 xl:p-14 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1b1062] via-[#2f1cb8] to-[#412ce7] text-white shadow-2xl min-h-[620px]">
-      {/* Dynamic Background Geometry & Glow */}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-[#fd6a49]/20 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-[#c4c0ff]/20 blur-2xl pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+    <div className="relative hidden lg:flex flex-col justify-between p-10 xl:p-12 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1A1614] via-[#26201B] to-[#2D2621] text-[#FAF8F5] shadow-xl min-h-[580px] w-full border border-[#3E342D]">
+      {/* Warm Ambient Glows */}
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-[#8C5338]/25 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-[#C27838]/15 blur-2xl pointer-events-none" />
 
       {/* Top Header Badge */}
       <div className="relative z-10">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold tracking-wide uppercase shadow-sm">
-          <Sparkles className="w-3.5 h-3.5 text-[#fd6a49]" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#EFEAE4] text-xs font-bold tracking-wide uppercase shadow-sm">
+          <Sparkles className="w-3.5 h-3.5 text-[#C27838]" />
           <span>{badge}</span>
         </div>
       </div>
 
-      {/* Centerpiece Quotation / Value Proposition */}
-      <div className="relative z-10 my-auto py-8">
-        <h2 className="text-3xl xl:text-4xl font-extrabold tracking-tight leading-[1.15] text-white mb-4">
+      {/* Centerpiece Quotation & Value Proposition */}
+      <div className="relative z-10 my-auto py-6">
+        <h2 className="font-serif text-3xl xl:text-4xl font-normal tracking-tight leading-[1.18] text-[#FAF8F5] mb-4">
           {heading}
         </h2>
-        <p className="text-white/80 text-sm xl:text-base leading-relaxed max-w-md font-medium">
+        <p className="text-[#E8E2DA]/80 text-sm xl:text-base leading-relaxed max-w-md font-normal">
           {subheading}
         </p>
 
-        {/* Tactile Highlights Pill List */}
+        {/* Feature Pills Grid */}
         <div className="grid grid-cols-2 gap-3 mt-8 max-w-lg">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <Box className="w-4 h-4 text-[#ffb4a3]" />
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10">
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+              <Package className="w-4 h-4 text-[#C27838]" />
             </div>
             <div className="text-left">
-              <p className="text-xs font-bold text-white">Curated Drops</p>
-              <p className="text-[11px] text-white/70">Early 24h Vault Access</p>
+              <p className="text-xs font-bold text-[#FAF8F5]">Member Drops</p>
+              <p className="text-[11px] text-[#E8E2DA]/70">Early 24h vault access</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <Zap className="w-4 h-4 text-[#ffdbcc]" />
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10">
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+              <Zap className="w-4 h-4 text-[#E8A366]" />
             </div>
             <div className="text-left">
-              <p className="text-xs font-bold text-white">Priority Dispatch</p>
-              <p className="text-[11px] text-white/70">Express fulfillment</p>
+              <p className="text-xs font-bold text-[#FAF8F5]">Nest Rewards</p>
+              <p className="text-[11px] text-[#E8E2DA]/70">Earn store credit</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-4 h-4 text-[#c4c0ff]" />
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10">
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4 text-[#8C5338]" />
             </div>
             <div className="text-left">
-              <p className="text-xs font-bold text-white">Hardware Vault</p>
-              <p className="text-[11px] text-white/70">Extended warranty pass</p>
+              <p className="text-xs font-bold text-[#FAF8F5]">Authentic Kicks</p>
+              <p className="text-[11px] text-[#E8E2DA]/70">100% verified serial tags</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <Compass className="w-4 h-4 text-[#ffb595]" />
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10">
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+              <Award className="w-4 h-4 text-[#C27838]" />
             </div>
             <div className="text-left">
-              <p className="text-xs font-bold text-white">Studio Credit</p>
-              <p className="text-[11px] text-white/70">5% back on all orders</p>
+              <p className="text-xs font-bold text-[#FAF8F5]">Priority Dispatch</p>
+              <p className="text-[11px] text-[#E8E2DA]/70">White-glove courier</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Testimonial / Community Stat Footer */}
-      <div className="relative z-10 pt-6 border-t border-white/15 flex items-center justify-between">
+      <div className="relative z-10 pt-5 border-t border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
-            <div className="w-8 h-8 rounded-full border-2 border-white/50 bg-[#fd6a49] text-[10px] font-extrabold flex items-center justify-center">
-              MK
+            <div className="w-7 h-7 rounded-full border-2 border-[#2D2621] bg-[#8C5338] text-[10px] font-bold text-white flex items-center justify-center">
+              AF
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-white/50 bg-[#412ce7] text-[10px] font-extrabold flex items-center justify-center">
-              EL
+            <div className="w-7 h-7 rounded-full border-2 border-[#2D2621] bg-[#C27838] text-[10px] font-bold text-white flex items-center justify-center">
+              NB
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-white/50 bg-[#5b4dff] text-[10px] font-extrabold flex items-center justify-center">
-              AR
+            <div className="w-7 h-7 rounded-full border-2 border-[#2D2621] bg-[#1A1614] text-[10px] font-bold text-white flex items-center justify-center">
+              AD
             </div>
           </div>
           <div>
-            <p className="text-xs font-bold text-white">18,400+ Active Collectors</p>
-            <p className="text-[11px] text-white/70">Across Bengaluru, Tokyo &amp; NYC</p>
+            <p className="text-xs font-bold text-[#FAF8F5]">50,000+ Discerning Walkers</p>
+            <p className="text-[10px] text-[#E8E2DA]/70">Joined the UrbanNest Community</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 text-xs font-semibold text-white/80">
-          <span>Explore Vault</span>
-          <ArrowUpRight className="w-3.5 h-3.5" />
+        <div className="text-right">
+          <p className="text-xs font-bold text-[#C27838]">4.8 ★ Rating</p>
+          <p className="text-[10px] text-[#E8E2DA]/70">Over 5.2k Reviews</p>
         </div>
       </div>
     </div>

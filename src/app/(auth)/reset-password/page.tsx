@@ -4,8 +4,6 @@ import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { MeeoLogo } from '@/components/ui/MeeoLogo';
-import { Button } from '@/components/ui/Button';
 import { AuthVisualSide } from '@/features/auth/AuthVisualSide';
 import { PasswordStrengthMeter } from '@/features/auth/PasswordStrengthMeter';
 import { useResetPasswordMutation } from '@/hooks/useAuthMutations';
@@ -15,8 +13,8 @@ function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const destination = searchParams.get('dest') || 'collector@studio.meeo';
-  const otp = searchParams.get('otp') || '123456';
+  const destination = searchParams.get('dest') || 'rahul.kumar@urbannest.com';
+  const otp = searchParams.get('otp') || '1234';
 
   const { showToast } = useToast();
   const resetPasswordMutation = useResetPasswordMutation();
@@ -50,7 +48,7 @@ function ResetPasswordContent() {
       {
         onSuccess: () => {
           setIsSuccess(true);
-          showToast('Security password successfully updated!');
+          showToast('Account password successfully updated!', 'success');
         },
         onError: (err: any) => {
           const apiMsg =
@@ -58,7 +56,7 @@ function ResetPasswordContent() {
             err.response?.data?.errors?.password ||
             err.response?.data?.errors?.otp ||
             err.message ||
-            'Failed to update password. Please try again.';
+            'Could not update password. Please retry.';
           setErrorMsg(apiMsg);
           showToast(apiMsg, 'error');
         },
@@ -67,139 +65,125 @@ function ResetPasswordContent() {
   };
 
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-      {/* Visual Side Banner (Left) */}
-      <div className="lg:col-span-6 xl:col-span-7 flex">
+    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch max-w-5xl">
+      <div className="lg:col-span-6 xl:col-span-6 flex">
         <AuthVisualSide
-          heading="Restore Account Security."
-          subheading="Choose a strong, unique passphrase to safeguard your orders, studio points balance, and hardware warranty certificates."
-          badge="Vault Key Reset"
+          heading="Secure Password Configuration."
+          subheading="Choose a strong security key to safeguard your order history, shipping addresses, and member privileges."
+          badge="UrbanNest Security"
         />
       </div>
 
-      {/* Reset Password Card (Right) */}
-      <div className="lg:col-span-6 xl:col-span-5 flex flex-col justify-center">
-        <div className="w-full bg-white dark:bg-[#131826] rounded-3xl p-6 sm:p-10 border border-[#e2e7ff] dark:border-[#28334d] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)]">
-          {/* Header */}
-          <div className="flex flex-col gap-2 mb-6">
-            <div className="flex items-center justify-between">
-              <MeeoLogo size="md" />
-              <div className="w-9 h-9 rounded-xl bg-[#eaedff] dark:bg-[#1e273d] flex items-center justify-center text-[#412ce7] dark:text-[#685aff]">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-black text-[#131b2e] dark:text-white tracking-tight mt-2">
-              Set New Password<span className="text-[#fd6a49]">.</span>
+      <div className="lg:col-span-6 xl:col-span-6 flex flex-col justify-center">
+        <div className="w-full bg-white rounded-3xl p-6 sm:p-9 border border-[#E8E2DA] shadow-sm">
+          <div className="flex flex-col gap-1.5 mb-6">
+            <Link
+              href="/"
+              className="font-serif text-2xl font-bold tracking-tight text-[#2D2621]"
+            >
+              UrbanNest
+            </Link>
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D2621] tracking-tight mt-3">
+              Set new password<span className="text-[#8C5338]">.</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#464556] dark:text-[#a6abbf]">
-              Enter and confirm your new studio account access passphrase.
+            <p className="text-xs sm:text-sm text-[#786C64]">
+              Configure a new password for account {destination}.
             </p>
           </div>
 
           {isSuccess ? (
-            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50">
-              <div className="w-12 h-12 rounded-2xl bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 flex items-center justify-center mb-3">
+            <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-[#E8E2DA] text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-[#131b2e] dark:text-white mb-1">
-                Password Reset Complete!
+              <h3 className="font-serif text-xl font-bold text-[#2D2621]">
+                Password Successfully Reset
               </h3>
-              <p className="text-xs text-[#464556] dark:text-[#a6abbf] mb-6">
-                Your new security password is now active. You can now sign in to your studio dashboard.
+              <p className="text-xs text-[#786C64]">
+                Your account is now protected with your new password.
               </p>
-
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => router.push('/login')}
-                className="w-full"
+              <Link
+                href="/login"
+                className="w-full h-11 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
               >
-                Sign In Now
-              </Button>
+                <span>Proceed to Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           ) : (
-            <>
-              {/* Error Notice */}
+            <form onSubmit={handleSubmit} className="space-y-4">
               {errorMsg && (
-                <div className="mb-5 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                  <span>{errorMsg}</span>
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+                  {errorMsg}
                 </div>
               )}
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {/* New Password */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
-                    New Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Minimum 6 characters"
-                      className="w-full h-11 pl-10 pr-11 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#777588] hover:text-[#131b2e] dark:hover:text-white cursor-pointer"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+              <div>
+                <label className="block text-xs font-bold text-[#2D2621] mb-1.5">
+                  New Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#786C64]">
+                    <Lock className="w-4 h-4" />
                   </div>
-
-                  <PasswordStrengthMeter password={password} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] focus:bg-white text-xs text-[#2D2621] placeholder:text-[#786C64] focus:outline-none focus:border-[#8C5338] focus:ring-1 focus:ring-[#8C5338]/20 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#786C64] hover:text-[#2D2621] cursor-pointer"
+                    aria-label="Toggle password visibility"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
+                <PasswordStrengthMeter password={password} />
+              </div>
 
-                {/* Confirm New Password */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
-                    Confirm New Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Re-enter new password"
-                      className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
-                    />
+              <div>
+                <label className="block text-xs font-bold text-[#2D2621] mb-1.5">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#786C64]">
+                    <Lock className="w-4 h-4" />
                   </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] focus:bg-white text-xs text-[#2D2621] placeholder:text-[#786C64] focus:outline-none focus:border-[#8C5338] focus:ring-1 focus:ring-[#8C5338]/20 transition-all"
+                  />
                 </div>
+              </div>
 
-                {/* Submit Action */}
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  isLoading={resetPasswordMutation.isPending}
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
-                  className="w-full mt-2"
-                >
-                  Save &amp; Activate Password
-                </Button>
-              </form>
-            </>
+              <button
+                type="submit"
+                disabled={resetPasswordMutation.isPending}
+                className="w-full h-11.5 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+              >
+                <span>
+                  {resetPasswordMutation.isPending
+                    ? 'Updating Password...'
+                    : 'Save & Update Password'}
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
           )}
 
-          {/* Return link */}
-          <div className="mt-6 pt-5 border-t border-[#e2e7ff] dark:border-[#28334d] text-center">
+          <div className="pt-6 mt-6 border-t border-[#E8E2DA] text-center text-xs text-[#786C64]">
             <Link
               href="/login"
-              className="text-xs font-bold text-[#464556] dark:text-[#a6abbf] hover:text-[#412ce7] dark:hover:text-[#685aff]"
+              className="font-bold text-[#8C5338] hover:underline"
             >
               Cancel and Return to Sign In
             </Link>
@@ -214,8 +198,8 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full h-96 flex items-center justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-[#412ce7] border-t-transparent animate-spin" />
+        <div className="w-full min-h-[400px] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#8C5338] border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >

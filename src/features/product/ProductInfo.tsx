@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useToast } from '@/context/ToastContext';
+import { AppRoute } from '@/routes';
 
 interface ProductInfoProps {
   product: Product;
@@ -49,7 +50,7 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({ product }) => {
   const handleBuyNow = () => {
     const variantTitle = currentVariant?.title || currentVariant?.sku;
     addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
-    router.push('/checkout');
+    router.push(AppRoute.CHECKOUT);
   };
 
   const handleWishlist = () => {

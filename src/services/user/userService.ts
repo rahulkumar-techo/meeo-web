@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/config/client';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse } from '@/types/common/api.types';
 import type { AuthUser } from '@/types/auth/auth.types';
 import type {
@@ -19,7 +20,10 @@ export const userService = {
    * Update customer first name, last name, or avatar URL.
    */
   async updateProfile(payload: UpdateProfilePayload): Promise<ApiResponse<AuthUser>> {
-    const response = await apiClient.patch<ApiResponse<AuthUser>>('/user/profile', payload);
+    const response = await apiClient.patch<ApiResponse<AuthUser>>(
+      ApiRoute.USER.PROFILE,
+      payload
+    );
     return response.data;
   },
 
@@ -30,7 +34,7 @@ export const userService = {
     payload: RequestPhoneOtpPayload
   ): Promise<ApiResponse<RequestPhoneOtpResponse>> {
     const response = await apiClient.post<ApiResponse<RequestPhoneOtpResponse>>(
-      '/user/phone/request-otp',
+      ApiRoute.USER.PHONE_REQUEST_OTP,
       payload
     );
     return response.data;
@@ -41,7 +45,7 @@ export const userService = {
    */
   async verifyPhoneOtp(payload: VerifyPhonePayload): Promise<ApiResponse<VerifyPhoneResponse>> {
     const response = await apiClient.put<ApiResponse<VerifyPhoneResponse>>(
-      '/user/phone',
+      ApiRoute.USER.UPDATE_PHONE_NO,
       payload
     );
     return response.data;

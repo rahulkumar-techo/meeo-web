@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/config/client';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse } from '@/types/common/api.types';
 import type {
   WishlistData,
@@ -17,7 +18,9 @@ export const wishlistService = {
    * Retrieve customer's saved wishlist products.
    */
   async getWishlist(): Promise<ApiResponse<WishlistData>> {
-    const response = await apiClient.get<ApiResponse<WishlistData>>('/wishlist');
+    const response = await apiClient.get<ApiResponse<WishlistData>>(
+      ApiRoute.WISHLISTS.SINGULAR_BASE
+    );
     return response.data;
   },
 
@@ -27,14 +30,15 @@ export const wishlistService = {
   async addToWishlist(productId: string): Promise<ApiResponse<AddToWishlistResponse>> {
     try {
       const response = await apiClient.post<ApiResponse<AddToWishlistResponse>>(
-        `/wishlist/products/${productId}`
+        ApiRoute.WISHLISTS.SINGULAR_PRODUCT(productId)
       );
       return response.data;
     } catch {
       // Body payload fallback
-      const fallback = await apiClient.post<ApiResponse<AddToWishlistResponse>>('/wishlist', {
-        productId,
-      });
+      const fallback = await apiClient.post<ApiResponse<AddToWishlistResponse>>(
+        ApiRoute.WISHLISTS.SINGULAR_BASE,
+        { productId }
+      );
       return fallback.data;
     }
   },
@@ -44,7 +48,7 @@ export const wishlistService = {
    */
   async removeFromWishlist(productId: string): Promise<ApiResponse<null>> {
     const response = await apiClient.delete<ApiResponse<null>>(
-      `/wishlist/products/${productId}`
+      ApiRoute.WISHLISTS.SINGULAR_PRODUCT(productId)
     );
     return response.data;
   },
@@ -57,7 +61,7 @@ export const wishlistService = {
     payload: MoveWishlistToCartPayload
   ): Promise<ApiResponse<MoveWishlistToCartResponse>> {
     const response = await apiClient.post<ApiResponse<MoveWishlistToCartResponse>>(
-      `/wishlist/products/${productId}/move-to-cart`,
+      ApiRoute.WISHLISTS.SINGULAR_TRANSFER_TO_CART(productId),
       payload
     );
     return response.data;

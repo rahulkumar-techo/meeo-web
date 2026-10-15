@@ -2,20 +2,21 @@
 
 /**
  * @file CartContext.tsx
- * @description Global shopping cart state with live backend synchronization, optimistic updates, and coupon management.
+ * @description Global shopping cart state with live backend synchronization, localStorage persistence, and resilient error recovery.
  */
 
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Product } from '@/types/product';
 import { CartItem, CartSummary } from '@/types/cart';
 import { cartService } from '@/services/cart/cartService';
 import { catalogService } from '@/services/catalog/catalogService';
-import { setSessionId } from '@/lib/session';
+import { useUserStore } from '@/store/user.store';
 import { mapBackendCartItem } from '@/lib/apiHelper';
 
 interface CartContextType {
   items: CartItem[];
   itemCount: number;
+  cartId: string;
   isCartDrawerOpen: boolean;
   summary: CartSummary;
   couponCode: string;
@@ -25,6 +26,7 @@ interface CartContextType {
   updateQuantity: (itemId: string, newQty: number) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
+  syncCartToBackend: () => Promise<boolean>;
   openCartDrawer: () => void;
   closeCartDrawer: () => void;
   applyCoupon: (code: string) => boolean;
@@ -34,45 +36,222 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const LOCAL_STORAGE_CART_KEY = 'meeo_cart_items_v2';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [cartId, setCartId] = useState<string>('');
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Sync and hydrate cart items from backend
+  const itemsRef = useRef<CartItem[]>(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  const isSyncingRef = useRef(false);
+  const hasHydratedRef = useRef(false);
+
+  // Helper to persist to localStorage
+  const persistItems = useCallback((newItems: CartItem[]) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_CART_KEY, JSON.stringify(newItems));
+      } catch (err) {
+        console.warn('Could not save cart to localStorage:', err);
+      }
+    }
+  }, []);
+
+  // 1. Initial hydration from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setItems(parsed);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load cart from localStorage:', err);
+      } finally {
+        setIsInitialized(true);
+      }
+    }
+  }, []);
+
+  // Sync local items to server cart if user is authenticated and backend cart is empty
+  const syncCartToBackend = useCallback(async (): Promise<boolean> => {
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth || isSyncingRef.current) {
+      return false;
+    }
+
+    let currentItems = itemsRef.current;
+    if (currentItems.length === 0 && typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            currentItems = parsed;
+          }
+        }
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+
+    if (currentItems.length === 0) {
+      return false;
+    }
+
+    try {
+      isSyncingRef.current = true;
+      const backendRes = await cartService.getCart();
+      const rawData = (backendRes as any)?.data || backendRes;
+      if (rawData?.id || rawData?.cartId) {
+        setCartId(rawData.id || rawData.cartId);
+      }
+
+      const existingItems = Array.isArray(rawData?.items)
+        ? rawData.items
+        : Array.isArray(rawData)
+        ? rawData
+        : [];
+      const existingVariantIds = new Set(
+        existingItems.map((bi: any) => bi.variantId || bi.variant?.id)
+      );
+
+      for (const item of currentItems) {
+        let targetVariantId = item.variantId;
+
+        if (!targetVariantId || !UUID_REGEX.test(targetVariantId)) {
+          targetVariantId =
+            (item.product as any)?.defaultVariantId ||
+            item.product?.variants?.[0]?.id;
+
+          if (!targetVariantId || !UUID_REGEX.test(targetVariantId)) {
+            const lookupKey =
+              (item.product as any)?.productId ||
+              item.productId ||
+              item.product?.slug ||
+              item.product?.id;
+            if (lookupKey) {
+              try {
+                let prodRes: any = null;
+                if (UUID_REGEX.test(lookupKey)) {
+                  prodRes = await catalogService.getProductById(lookupKey);
+                } else {
+                  prodRes = await catalogService.getProductBySlug(lookupKey);
+                }
+                const sVariants = prodRes?.data?.variants || prodRes?.variants || [];
+                if (sVariants.length > 0) {
+                  targetVariantId = sVariants[0]?.id;
+                }
+              } catch {
+                // Ignore lookup errors
+              }
+            }
+          }
+        }
+
+        if (
+          targetVariantId &&
+          UUID_REGEX.test(targetVariantId) &&
+          !existingVariantIds.has(targetVariantId)
+        ) {
+          try {
+            await cartService.addToCart({
+              variantId: targetVariantId,
+              quantity: item.quantity || 1,
+            });
+            existingVariantIds.add(targetVariantId);
+          } catch (addErr) {
+            console.warn('Sync add to cart failed for variant:', targetVariantId, addErr);
+          }
+        }
+      }
+
+      const updatedRes = await cartService.getCart();
+      const updatedRaw = (updatedRes as any)?.data || updatedRes;
+      if (updatedRaw?.id || updatedRaw?.cartId) {
+        setCartId(updatedRaw.id || updatedRaw.cartId);
+      }
+      const updatedList = Array.isArray(updatedRaw?.items)
+        ? updatedRaw.items
+        : Array.isArray(updatedRaw)
+        ? updatedRaw
+        : [];
+
+      if (updatedList.length > 0) {
+        const mapped = updatedList.map(mapBackendCartItem);
+        setItems(mapped);
+        persistItems(mapped);
+        return true;
+      }
+      return false;
+    } catch (syncErr) {
+      console.warn('Cart backend sync notice:', syncErr);
+      return false;
+    } finally {
+      isSyncingRef.current = false;
+    }
+  }, [persistItems]);
+
+  // 2. Hydrate cart items from backend once when authenticated
   const refreshCart = useCallback(async () => {
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (!isAuth) {
+      return;
+    }
+
     try {
       const res = await cartService.getCart();
       const rawData = (res as any)?.data || res;
-      if (rawData?.sessionId) {
-        setSessionId(rawData.sessionId);
+      if (rawData?.id || rawData?.cartId) {
+        setCartId(rawData.id || rawData.cartId);
       }
+
       const itemsList = Array.isArray(rawData?.items)
         ? rawData.items
         : Array.isArray(rawData)
         ? rawData
         : [];
-      if (itemsList.length > 0 || (rawData && 'items' in rawData)) {
-        setItems(itemsList.map(mapBackendCartItem));
+
+      if (itemsList.length > 0) {
+        const mapped = itemsList.map(mapBackendCartItem);
+        setItems(mapped);
+        persistItems(mapped);
       }
     } catch (err) {
-      console.warn('Cart hydration notice:', err);
+      console.warn('Cart backend hydration notice:', err);
     }
-  }, []);
+  }, [persistItems]);
 
+  const isAuthenticated = useUserStore((s) => s.isAuthenticated);
+
+  // Run initial hydration only once when user is authenticated
   useEffect(() => {
-    refreshCart();
-  }, [refreshCart]);
+    if (isInitialized && isAuthenticated && !hasHydratedRef.current) {
+      hasHydratedRef.current = true;
+      refreshCart();
+    } else if (!isAuthenticated) {
+      hasHydratedRef.current = false;
+    }
+  }, [isInitialized, isAuthenticated, refreshCart]);
 
   const itemCount = useMemo(() => {
-    return items.reduce((acc, item) => acc + item.quantity, 0);
+    return items.reduce((acc, item) => acc + (item.quantity || 1), 0);
   }, [items]);
 
   const summary = useMemo<CartSummary>(() => {
     const subtotal = items.reduce(
-      (acc, item) => acc + (item.product?.price || 0) * item.quantity,
+      (acc, item) => acc + (item.product?.price || 0) * (item.quantity || 1),
       0
     );
     const freeShippingThreshold = 5000;
@@ -96,36 +275,47 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [items, appliedDiscount, couponCode]);
 
   const addToCart = async (product: Product, quantity = 1, color?: string, size?: string) => {
+    if (!product) return;
+
     // 1. Resolve variant ID from product object or fetch details from server
     let targetVariantId =
+      (product as any)?.defaultVariantId ||
       product.variants?.find(
         (v: any) =>
           (color && (v.title?.includes(color) || v.attributes?.some((a: any) => a.value === color))) ||
           (size && (v.title?.includes(size) || v.attributes?.some((a: any) => a.value === size)))
-      )?.id || product.variants?.[0]?.id;
+      )?.id ||
+      product.variants?.[0]?.id;
 
-    if (!targetVariantId && (product.id || product.slug)) {
-      try {
-        let prodRes: any = null;
-        if (product.id && UUID_REGEX.test(product.id)) {
-          prodRes = await catalogService.getProductById(product.id);
-        } else if (product.slug) {
-          prodRes = await catalogService.getProductBySlug(product.slug);
+    if (!targetVariantId || !UUID_REGEX.test(targetVariantId)) {
+      const lookupKey =
+        (product as any)?.productId ||
+        product.slug ||
+        product.id;
+
+      if (lookupKey) {
+        try {
+          let prodRes: any = null;
+          if (UUID_REGEX.test(lookupKey)) {
+            prodRes = await catalogService.getProductById(lookupKey);
+          } else {
+            prodRes = await catalogService.getProductBySlug(lookupKey);
+          }
+          const serverVariants = prodRes?.data?.variants || prodRes?.variants || [];
+          if (serverVariants.length > 0) {
+            const matched =
+              serverVariants.find(
+                (v: any) =>
+                  (color &&
+                    (v.title?.includes(color) || v.attributes?.some((a: any) => a.value === color))) ||
+                  (size &&
+                    (v.title?.includes(size) || v.attributes?.some((a: any) => a.value === size)))
+              ) || serverVariants[0];
+            targetVariantId = matched.id;
+          }
+        } catch (err) {
+          console.warn('Could not fetch product variants from server:', err);
         }
-        const serverVariants = prodRes?.data?.variants || prodRes?.variants || [];
-        if (serverVariants.length > 0) {
-          const matched =
-            serverVariants.find(
-              (v: any) =>
-                (color &&
-                  (v.title?.includes(color) || v.attributes?.some((a: any) => a.value === color))) ||
-                (size &&
-                  (v.title?.includes(size) || v.attributes?.some((a: any) => a.value === size)))
-            ) || serverVariants[0];
-          targetVariantId = matched.id;
-        }
-      } catch (err) {
-        console.warn('Could not fetch product variants from server:', err);
       }
     }
 
@@ -136,9 +326,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const tempId =
       typeof crypto !== 'undefined' && crypto.randomUUID
         ? crypto.randomUUID()
-        : '00000000-0000-4000-8000-000000000000';
+        : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // 2. Optimistic UI update
+    // 2. Optimistic UI update & immediate persistence
     setItems((prev) => {
       const existingIndex = prev.findIndex(
         (i) =>
@@ -147,55 +337,69 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           i.selectedSize === size
       );
 
+      let updated: CartItem[];
       if (existingIndex > -1) {
-        const updated = [...prev];
-        updated[existingIndex].quantity += quantity;
-        return updated;
+        updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + quantity,
+        };
+      } else {
+        const newItem: CartItem = {
+          id: tempId,
+          productId: (product as any)?.productId || product.id,
+          variantId: targetVariantId,
+          product,
+          quantity,
+          selectedColor: color || product.colors?.[0]?.name,
+          selectedSize: size || product.sizes?.[0]?.size,
+          addedAt: new Date().toISOString(),
+        };
+        updated = [newItem, ...prev];
       }
 
-      const newItem: CartItem = {
-        id: tempId,
-        productId: product.id,
-        variantId: targetVariantId,
-        product,
-        quantity,
-        selectedColor: color || product.colors?.[0]?.name,
-        selectedSize: size || product.sizes?.[0]?.size,
-        addedAt: new Date().toISOString(),
-      };
-      return [newItem, ...prev];
+      persistItems(updated);
+      return updated;
     });
 
     setIsCartDrawerOpen(true);
 
-    // 3. Dispatch POST /api/v1/cart/items and sync database cart
-    try {
-      if (targetVariantId && UUID_REGEX.test(targetVariantId)) {
+    // 3. Dispatch POST /api/v1/cart/items and sync database cart when authenticated
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (isAuth && targetVariantId && UUID_REGEX.test(targetVariantId)) {
+      try {
         const addRes = await cartService.addToCart({
           variantId: targetVariantId,
           quantity,
         });
         const cartData = (addRes as any)?.data || addRes;
-        if (cartData?.sessionId) {
-          setSessionId(cartData.sessionId);
+        if (cartData?.id || cartData?.cartId) {
+          setCartId(cartData.id || cartData.cartId);
         }
-        if (Array.isArray(cartData?.items)) {
-          setItems(cartData.items.map(mapBackendCartItem));
+        if (Array.isArray(cartData?.items) && cartData.items.length > 0) {
+          const mapped = cartData.items.map(mapBackendCartItem);
+          setItems(mapped);
+          persistItems(mapped);
         } else {
           await refreshCart();
         }
+      } catch (err) {
+        console.warn('Backend cart sync warning:', err);
       }
-    } catch (err) {
-      console.warn('Backend cart sync warning:', err);
     }
   };
 
   const removeFromCart = async (itemId: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== itemId));
-    if (UUID_REGEX.test(itemId) && itemId !== '00000000-0000-4000-8000-000000000000') {
+    setItems((prev) => {
+      const updated = prev.filter((item) => item.id !== itemId);
+      persistItems(updated);
+      return updated;
+    });
+
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (isAuth && UUID_REGEX.test(itemId) && itemId !== '00000000-0000-4000-8000-000000000000') {
       try {
         await cartService.removeFromCart(itemId);
-        await refreshCart();
       } catch (err) {
         console.warn('Backend item remove warning:', err);
       }
@@ -207,13 +411,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await removeFromCart(itemId);
       return;
     }
-    setItems((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, quantity: newQty } : item))
-    );
-    if (UUID_REGEX.test(itemId) && itemId !== '00000000-0000-4000-8000-000000000000') {
+
+    setItems((prev) => {
+      const updated = prev.map((item) =>
+        item.id === itemId ? { ...item, quantity: newQty } : item
+      );
+      persistItems(updated);
+      return updated;
+    });
+
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (isAuth && UUID_REGEX.test(itemId) && itemId !== '00000000-0000-4000-8000-000000000000') {
       try {
         await cartService.updateCartItem(itemId, { quantity: newQty });
-        await refreshCart();
       } catch (err) {
         console.warn('Backend quantity update warning:', err);
       }
@@ -222,10 +432,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = async () => {
     setItems([]);
-    try {
-      await cartService.clearCart();
-    } catch (err) {
-      console.warn('Backend clear cart warning:', err);
+    persistItems([]);
+
+    const isAuth = useUserStore.getState().isAuthenticated;
+    if (isAuth) {
+      try {
+        await cartService.clearCart();
+      } catch (err) {
+        console.warn('Backend clear cart warning:', err);
+      }
     }
   };
 
@@ -257,6 +472,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         items,
         itemCount,
+        cartId,
         isCartDrawerOpen,
         summary,
         couponCode,
@@ -266,6 +482,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateQuantity,
         clearCart,
         refreshCart,
+        syncCartToBackend,
         openCartDrawer,
         closeCartDrawer,
         applyCoupon,

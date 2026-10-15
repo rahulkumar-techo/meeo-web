@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Plus_Jakarta_Sans, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { MuiThemeRegistry } from '@/components/theme/MuiThemeRegistry';
@@ -25,24 +25,31 @@ const plusJakarta = Plus_Jakarta_Sans({
   weight: ['400', '500', '600', '700', '800'],
 });
 
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+  weight: ['400', '500', '600', '700', '800', '900'],
+});
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf8ff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b0f19' },
+    { media: '(prefers-color-scheme: light)', color: '#FAF8F5' },
+    { media: '(prefers-color-scheme: dark)', color: '#120F0D' },
   ],
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
   title: {
-    default: 'Meeo · Mindful Tech-Commerce & Tactile Objects',
-    template: '%s | Meeo',
+    default: 'UrbanNest · Premium Footwear & Lifestyle Store',
+    template: '%s | UrbanNest',
   },
-  description: SITE_CONFIG.description,
+  description: 'UrbanNest: Curated collection of iconic sneakers, lifestyle footwear, and premium apparel.',
   keywords: SITE_CONFIG.keywords,
   authors: SITE_CONFIG.authors,
   creator: SITE_CONFIG.creator,
@@ -105,7 +112,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" className={`${plusJakarta.variable} ${playfair.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Global JSON-LD Structured Data */}
         <JsonLd schema={[generateOrganizationSchema(), generateWebSiteSchema()]} />
@@ -144,7 +151,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-surface text-on-surface overflow-x-hidden w-full">
+      <body className="min-h-full flex flex-col bg-[#FAF8F5] text-[#2D2621] overflow-x-hidden w-full font-sans">
         <ThemeProvider>
           <MuiThemeRegistry>
             <ToastProvider>
@@ -158,7 +165,7 @@ export default function RootLayout({
                           <Header />
 
                           {/* Main Viewport Container */}
-                          <main className="flex-1 w-full pt-[108px] pb-20 md:pb-0 overflow-x-hidden">
+                          <main className="flex-1 w-full pb-16 md:pb-0 overflow-x-hidden">
                             {children}
                           </main>
 

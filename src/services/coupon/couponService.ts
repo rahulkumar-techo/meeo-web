@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/config/client';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse } from '@/types/common/api.types';
 import type {
   ValidateCouponPayload,
@@ -19,7 +20,7 @@ export const couponService = {
     payload: ValidateCouponPayload
   ): Promise<ApiResponse<ValidateCouponResponse>> {
     const response = await apiClient.post<ApiResponse<ValidateCouponResponse>>(
-      '/coupons/validate',
+      ApiRoute.COUPONS.COUPON_VALIDATE,
       payload
     );
     return response.data;
@@ -30,7 +31,7 @@ export const couponService = {
    */
   async getMyCouponHistory(): Promise<ApiResponse<CouponRedemptionRecord[]>> {
     const response = await apiClient.get<ApiResponse<CouponRedemptionRecord[]>>(
-      '/coupons/my-history'
+      ApiRoute.COUPONS.COUPON_HISTORY
     );
     return response.data;
   },

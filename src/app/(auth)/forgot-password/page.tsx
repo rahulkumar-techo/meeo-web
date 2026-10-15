@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Phone, ArrowLeft, ArrowRight, KeyRound, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import { MeeoLogo } from '@/components/ui/MeeoLogo';
-import { Button } from '@/components/ui/Button';
+import { Mail, ArrowLeft, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 import { AuthVisualSide } from '@/features/auth/AuthVisualSide';
 import { useForgotPasswordMutation } from '@/hooks/useAuthMutations';
 import { useToast } from '@/context/ToastContext';
@@ -16,12 +14,10 @@ export default function ForgotPasswordPage() {
   const forgotPasswordMutation = useForgotPasswordMutation();
 
   const [destination, setDestination] = useState<string>('');
-  const [method, setMethod] = useState<'otp' | 'email_link'>('otp');
-  const [isMagicLinkPending, setIsMagicLinkPending] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isSuccessLinkSent, setIsSuccessLinkSent] = useState<boolean>(false);
 
-  const isSubmitting = forgotPasswordMutation.isPending || isMagicLinkPending;
+  const isSubmitting = forgotPasswordMutation.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,209 +28,100 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    if (method === 'otp') {
-      forgotPasswordMutation.mutate(
-        {
-          email: destination.trim(),
+    forgotPasswordMutation.mutate(
+      {
+        email: destination.trim(),
+      },
+      {
+        onSuccess: (res) => {
+          showToast(res.message || 'Password reset verification code dispatched!', 'success');
+          router.push(
+            `/verify-otp?mode=forgot_password&dest=${encodeURIComponent(destination.trim())}`
+          );
         },
-        {
-          onSuccess: (res) => {
-            showToast(res.message || 'Password reset verification code dispatched!');
-            router.push(
-              `/verify-otp?mode=forgot_password&dest=${encodeURIComponent(destination.trim())}`
-            );
-          },
-          onError: (err: any) => {
-            const apiMsg =
-              err.response?.data?.message ||
-              err.response?.data?.errors?.email ||
-              err.message ||
-              'Could not process request. Please try again.';
-            setErrorMsg(apiMsg);
-            showToast(apiMsg, 'error');
-          },
-        }
-      );
-    } else {
-      setIsMagicLinkPending(true);
-      forgotPasswordMutation.mutate(
-        {
-          email: destination.trim(),
+        onError: (err: any) => {
+          const apiMsg =
+            err.response?.data?.message ||
+            err.response?.data?.errors?.email ||
+            err.message ||
+            'Could not process request. Please try again.';
+          setErrorMsg(apiMsg);
+          showToast(apiMsg, 'error');
         },
-        {
-          onSuccess: () => {
-            setIsMagicLinkPending(false);
-            setIsSuccessLinkSent(true);
-            showToast('Recovery code sent to your email inbox');
-          },
-          onError: (err: any) => {
-            setIsMagicLinkPending(false);
-            const apiMsg =
-              err.response?.data?.message ||
-              err.response?.data?.errors?.email ||
-              err.message ||
-              'Failed to dispatch recovery email.';
-            setErrorMsg(apiMsg);
-            showToast(apiMsg, 'error');
-          },
-        }
-      );
-    }
+      }
+    );
   };
 
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-      {/* Visual Side Banner (Left) */}
-      <div className="lg:col-span-6 xl:col-span-7 flex">
+    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch max-w-5xl">
+      <div className="lg:col-span-6 xl:col-span-6 flex">
         <AuthVisualSide
-          heading="Secure Account &amp; Vault Recovery Protocol."
-          subheading="We prioritize your privacy and asset security. Follow the two-factor authentication recovery steps to securely reset your credentials and restore studio access."
-          badge="Security Recovery"
+          heading="Secure Account Access Recovery."
+          subheading="Follow the verified verification steps to reset your UrbanNest account credentials and resume exploring curated drops."
+          badge="UrbanNest Security"
         />
       </div>
 
-      {/* Forgot Password Card (Right) */}
-      <div className="lg:col-span-6 xl:col-span-5 flex flex-col justify-center">
-        <div className="w-full bg-white dark:bg-[#131826] rounded-3xl p-6 sm:p-10 border border-[#e2e7ff] dark:border-[#28334d] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)]">
-          {/* Header */}
-          <div className="flex flex-col gap-2 mb-6">
-            <div className="flex items-center justify-between">
-              <MeeoLogo size="md" />
-              <div className="w-9 h-9 rounded-xl bg-[#eaedff] dark:bg-[#1e273d] flex items-center justify-center text-[#412ce7] dark:text-[#685aff]">
-                <KeyRound className="w-4 h-4" />
-              </div>
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-black text-[#131b2e] dark:text-white tracking-tight mt-2">
-              Forgot Password<span className="text-[#fd6a49]">?</span>
+      <div className="lg:col-span-6 xl:col-span-6 flex flex-col justify-center">
+        <div className="w-full bg-white rounded-3xl p-6 sm:p-9 border border-[#E8E2DA] shadow-sm">
+          <div className="flex flex-col gap-1.5 mb-6">
+            <Link
+              href="/"
+              className="font-serif text-2xl font-bold tracking-tight text-[#2D2621]"
+            >
+              UrbanNest
+            </Link>
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D2621] tracking-tight mt-3">
+              Reset password<span className="text-[#8C5338]">.</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#464556] dark:text-[#a6abbf]">
-              No worries. Enter your registered email or phone to reset your access passphrase.
+            <p className="text-xs sm:text-sm text-[#786C64]">
+              Enter the email address registered with your account.
             </p>
           </div>
 
-          {/* Success State for Direct Email Link */}
-          {isSuccessLinkSent ? (
-            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50">
-              <div className="w-12 h-12 rounded-2xl bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 flex items-center justify-center mb-3">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-bold text-[#131b2e] dark:text-white mb-1">
-                Recovery Link Dispatched
-              </h3>
-              <p className="text-xs text-[#464556] dark:text-[#a6abbf] mb-6">
-                We have sent an authentication recovery link to{' '}
-                <span className="font-bold text-[#131b2e] dark:text-white">{destination}</span>. Check
-                your inbox and follow the secure link.
-              </p>
-
-              <div className="flex flex-col gap-2 w-full">
-                <Button
-                  variant="primary"
-                  onClick={() => router.push('/login')}
-                  className="w-full"
-                >
-                  Return to Sign In
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => setIsSuccessLinkSent(false)}
-                  className="text-xs text-[#777588] hover:text-[#412ce7] font-semibold py-1 cursor-pointer"
-                >
-                  Use a different email / phone
-                </button>
-              </div>
+          {errorMsg && (
+            <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+              {errorMsg}
             </div>
-          ) : (
-            <>
-              {/* Error Notice */}
-              {errorMsg && (
-                <div className="mb-5 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {/* Method selector */}
-                <div className="grid grid-cols-2 p-1 rounded-2xl bg-[#f2f3ff] dark:bg-[#182032] border border-[#e2e7ff] dark:border-[#28334d] mb-1">
-                  <button
-                    type="button"
-                    onClick={() => setMethod('otp')}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      method === 'otp'
-                        ? 'bg-white dark:bg-[#26314c] text-[#412ce7] dark:text-white shadow-xs'
-                        : 'text-[#464556] dark:text-[#a6abbf] hover:text-[#131b2e]'
-                    }`}
-                  >
-                    <span>Receive 6-Digit OTP</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setMethod('email_link')}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      method === 'email_link'
-                        ? 'bg-white dark:bg-[#26314c] text-[#412ce7] dark:text-white shadow-xs'
-                        : 'text-[#464556] dark:text-[#a6abbf] hover:text-[#131b2e]'
-                    }`}
-                  >
-                    <span>Email Magic Link</span>
-                  </button>
-                </div>
-
-                {/* Destination Input */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
-                    {method === 'otp' ? 'Registered Email or Mobile Number' : 'Registered Email Address'}
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
-                      {destination.includes('@') || method === 'email_link' ? (
-                        <Mail className="w-4 h-4" />
-                      ) : (
-                        <Phone className="w-4 h-4" />
-                      )}
-                    </div>
-                    <input
-                      type={method === 'email_link' ? 'email' : 'text'}
-                      required
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
-                      placeholder={
-                        method === 'email_link'
-                          ? 'milo.kapoor@studio.meeo'
-                          : 'name@studio.meeo or +91 98450...'
-                      }
-                      className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
-                    />
-                  </div>
-                </div>
-
-                {/* Submit Action */}
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  isLoading={isSubmitting}
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
-                  className="w-full mt-2"
-                >
-                  {method === 'otp' ? 'Send 6-Digit OTP Code' : 'Send Recovery Magic Link'}
-                </Button>
-              </form>
-            </>
           )}
 
-          {/* Return to Login */}
-          <div className="mt-6 pt-5 border-t border-[#e2e7ff] dark:border-[#28334d] text-center">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-[#2D2621] mb-1.5">
+                Registered Email
+              </label>
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#786C64]">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] focus:bg-white text-xs text-[#2D2621] placeholder:text-[#786C64] focus:outline-none focus:border-[#8C5338] focus:ring-1 focus:ring-[#8C5338]/20 transition-all"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-11.5 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+            >
+              <span>{isSubmitting ? 'Sending Code...' : 'Dispatch Verification Code'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+
+          <div className="pt-6 mt-6 border-t border-[#E8E2DA] text-center text-xs text-[#786C64]">
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#464556] dark:text-[#a6abbf] hover:text-[#412ce7] dark:hover:text-[#685aff] transition-colors"
+              className="inline-flex items-center gap-1.5 font-bold text-[#8C5338] hover:underline"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Remember your password? Sign in</span>
+              <span>Back to Sign In</span>
             </Link>
           </div>
         </div>

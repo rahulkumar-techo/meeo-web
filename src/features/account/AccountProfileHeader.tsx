@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Award, Sparkles, Shield, Gift, Settings, LogOut, LogIn } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { AppRoute } from '@/routes';
 
 export const AccountProfileHeader: React.FC = () => {
   const router = useRouter();
@@ -15,7 +16,7 @@ export const AccountProfileHeader: React.FC = () => {
   const handleLogout = () => {
     logout();
     showToast('Signed out of Meeo Studio');
-    router.push('/login');
+    router.push(AppRoute.AUTH.LOGIN);
   };
 
   const displayName = user

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { QrCode, CreditCard, Landmark, Clock, Banknote, ShieldCheck, LucideIcon } from 'lucide-react';
+import { QrCode, Landmark, ShieldCheck, LucideIcon, CheckCircle2 } from 'lucide-react';
 import { PaymentMethod } from '@/types/order';
 
 interface PaymentGatewaySelectorProps {
@@ -9,12 +9,12 @@ interface PaymentGatewaySelectorProps {
   onSelectMethod: (method: PaymentMethod['type']) => void;
   upiId: string;
   onUpiIdChange: (v: string) => void;
-  cardNumber: string;
-  onCardNumberChange: (v: string) => void;
-  cardExpiry: string;
-  onCardExpiryChange: (v: string) => void;
-  cardCvv: string;
-  onCardCvvChange: (v: string) => void;
+  cardNumber?: string;
+  onCardNumberChange?: (v: string) => void;
+  cardExpiry?: string;
+  onCardExpiryChange?: (v: string) => void;
+  cardCvv?: string;
+  onCardCvvChange?: (v: string) => void;
 }
 
 interface PaymentOption {
@@ -30,44 +30,21 @@ export const PaymentGatewaySelector: React.FC<PaymentGatewaySelectorProps> = ({
   onSelectMethod,
   upiId,
   onUpiIdChange,
-  cardNumber,
-  onCardNumberChange,
-  cardExpiry,
-  onCardExpiryChange,
-  cardCvv,
-  onCardCvvChange,
 }) => {
   const paymentMethods: PaymentOption[] = [
     {
       id: 'upi',
-      title: 'Instant UPI / QR',
-      subtitle: 'Google Pay, PhonePe, Paytm, CRED & Any UPI App',
+      title: 'Instant UPI / QR (Razorpay)',
+      subtitle: 'Google Pay, PhonePe, Paytm, CRED & Any UPI App / QR Code',
       icon: QrCode,
-      badge: 'Fastest',
-    },
-    {
-      id: 'card',
-      title: 'Credit or Debit Card',
-      subtitle: 'Visa, Mastercard, RuPay, Amex & International Cards',
-      icon: CreditCard,
+      badge: 'Recommended',
     },
     {
       id: 'netbanking',
-      title: 'NetBanking',
-      subtitle: 'HDFC, ICICI, SBI, Axis, Kotak & 50+ Indian Banks',
+      title: 'NetBanking (Razorpay)',
+      subtitle: 'HDFC, ICICI, SBI, Axis, Kotak & 50+ Indian Banks with instant debit',
       icon: Landmark,
-    },
-    {
-      id: 'emi',
-      title: 'Cardless EMI / PayLater',
-      subtitle: 'Split into 3 or 6 monthly installments with 0% interest',
-      icon: Clock,
-    },
-    {
-      id: 'cash_on_delivery',
-      title: 'Cash on Air Delivery',
-      subtitle: 'Pay cash or scan QR at your doorstep',
-      icon: Banknote,
+      badge: 'All Banks',
     },
   ];
 
@@ -82,110 +59,90 @@ export const PaymentGatewaySelector: React.FC<PaymentGatewaySelectorProps> = ({
             <div
               key={method.id}
               onClick={() => onSelectMethod(method.id)}
-              className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+              className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
                 isSelected
-                  ? 'border-[#412ce7] bg-[#eaedff]/30 shadow-xs'
-                  : 'border-[#e2e7ff] bg-white hover:border-[#c7c4d9]'
+                  ? 'border-[#412ce7] bg-[#eaedff]/40 dark:bg-[#1e273d]/60 shadow-xs ring-1 ring-[#412ce7]/20'
+                  : 'border-[#e2e7ff] dark:border-[#28334d] bg-white dark:bg-[#131826] hover:border-[#c7c4d9]'
               }`}
             >
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3.5">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-colors ${
                       isSelected
-                        ? 'bg-[#412ce7] text-white'
-                        : 'bg-[#f2f3ff] text-[#464556]'
+                        ? 'bg-[#412ce7] text-white shadow-xs'
+                        : 'bg-[#f2f3ff] dark:bg-[#1e273d] text-[#464556] dark:text-[#a6abbf]'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-[#131b2e]">{method.title}</h4>
+                      <h4 className="text-sm font-black text-[#131b2e] dark:text-white">
+                        {method.title}
+                      </h4>
                       {method.badge && (
-                        <span className="px-2 py-0.5 rounded bg-[#dcfce7] text-[#15803d] text-[10px] font-bold uppercase">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider">
                           {method.badge}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-[#464556] mt-0.5">{method.subtitle}</p>
+                    <p className="text-xs text-[#464556] dark:text-[#a6abbf] mt-0.5">
+                      {method.subtitle}
+                    </p>
                   </div>
                 </div>
 
                 <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    isSelected ? 'border-[#412ce7]' : 'border-[#c7c4d9]'
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    isSelected ? 'border-[#412ce7] bg-[#412ce7]' : 'border-[#c7c4d9] dark:border-[#4a5578]'
                   }`}
                 >
-                  {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-[#412ce7]" />}
+                  {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
                 </div>
               </div>
 
-              {/* Dynamic Nested Inputs based on Selection */}
+              {/* Dynamic Sub-Inputs for UPI */}
               {isSelected && method.id === 'upi' && (
-                <div className="mt-4 pt-4 border-t border-[#e2e7ff] flex flex-col gap-3 animate-in fade-in duration-200">
-                  <label className="text-xs font-bold uppercase text-[#777588]">
-                    Enter your UPI ID (VPA)
+                <div className="mt-4 pt-4 border-t border-[#e2e7ff] dark:border-[#28334d] flex flex-col gap-2.5 animate-in fade-in duration-200">
+                  <label className="text-xs font-bold uppercase text-[#777588] dark:text-[#a6abbf]">
+                    UPI ID / VPA (Optional - or scan QR in Razorpay):
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={upiId}
                       onChange={(e) => onUpiIdChange(e.target.value)}
-                      placeholder="username@okhdfcbank"
-                      className="flex-1 h-10 px-3 bg-white border border-[#c7c4d9] rounded-xl text-xs outline-none focus:border-[#412ce7]"
+                      placeholder="milo.kapoor@okhdfcbank"
+                      className="flex-1 h-10 px-3.5 bg-white dark:bg-[#131826] border border-[#c7c4d9] dark:border-[#28334d] rounded-xl text-xs text-[#131b2e] dark:text-white outline-none focus:border-[#412ce7]"
                     />
                     <button
                       type="button"
-                      className="px-4 bg-[#412ce7] text-white rounded-xl text-xs font-bold"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUpiIdChange('success@razorpay');
+                      }}
+                      className="px-3.5 bg-[#eaedff] dark:bg-[#1e273d] text-[#412ce7] dark:text-[#685aff] hover:bg-[#dae2fd] rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      Verify
+                      Fill Test UPI
                     </button>
                   </div>
+                  <span className="text-[11px] text-[#777588] dark:text-[#a6abbf]">
+                    💡 In Razorpay test mode, use <strong className="text-[#412ce7] dark:text-[#685aff]">success@razorpay</strong> for instant successful verification.
+                  </span>
                 </div>
               )}
 
-              {isSelected && method.id === 'card' && (
-                <div className="mt-4 pt-4 border-t border-[#e2e7ff] flex flex-col gap-3 animate-in fade-in duration-200">
-                  <div>
-                    <label className="text-xs font-bold uppercase text-[#777588] block mb-1">
-                      Card Number
-                    </label>
-                    <input
-                      type="text"
-                      value={cardNumber}
-                      onChange={(e) => onCardNumberChange(e.target.value)}
-                      placeholder="4532 •••• •••• 4018"
-                      className="w-full h-10 px-3 bg-white border border-[#c7c4d9] rounded-xl text-xs outline-none focus:border-[#412ce7]"
-                    />
+              {/* NetBanking Bank Selection Helper */}
+              {isSelected && method.id === 'netbanking' && (
+                <div className="mt-4 pt-4 border-t border-[#e2e7ff] dark:border-[#28334d] flex flex-col gap-2 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Popular Banks Supported (HDFC, ICICI, SBI, Axis, Kotak)</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold uppercase text-[#777588] block mb-1">
-                        Expiry Date
-                      </label>
-                      <input
-                        type="text"
-                        value={cardExpiry}
-                        onChange={(e) => onCardExpiryChange(e.target.value)}
-                        placeholder="MM / YY"
-                        className="w-full h-10 px-3 bg-white border border-[#c7c4d9] rounded-xl text-xs outline-none focus:border-[#412ce7]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold uppercase text-[#777588] block mb-1">
-                        CVV / CVC
-                      </label>
-                      <input
-                        type="password"
-                        maxLength={4}
-                        value={cardCvv}
-                        onChange={(e) => onCardCvvChange(e.target.value)}
-                        placeholder="•••"
-                        className="w-full h-10 px-3 bg-white border border-[#c7c4d9] rounded-xl text-xs outline-none focus:border-[#412ce7]"
-                      />
-                    </div>
-                  </div>
+                  <p className="text-[11px] text-[#777588] dark:text-[#a6abbf]">
+                    Razorpay NetBanking test simulator will allow instant one-click approval on checkout.
+                  </p>
                 </div>
               )}
             </div>
@@ -193,9 +150,9 @@ export const PaymentGatewaySelector: React.FC<PaymentGatewaySelectorProps> = ({
         })}
       </div>
 
-      <div className="p-3.5 rounded-2xl bg-[#faf8ff] border border-[#e2e7ff] flex items-center gap-2.5 text-xs text-[#464556]">
-        <ShieldCheck className="w-4 h-4 text-[#412ce7] shrink-0" />
-        <span>End-to-end RBI-compliant tokenization &amp; instant refund protection.</span>
+      <div className="p-3.5 rounded-2xl bg-[#faf8ff] dark:bg-[#182032] border border-[#e2e7ff] dark:border-[#28334d] flex items-center gap-2.5 text-xs text-[#464556] dark:text-[#a6abbf]">
+        <ShieldCheck className="w-4 h-4 text-[#412ce7] dark:text-[#685aff] shrink-0" />
+        <span>Secured by Razorpay PCI-DSS Level 1 &amp; RBI Tokenization Vault.</span>
       </div>
     </div>
   );

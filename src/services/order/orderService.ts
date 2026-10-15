@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/config/client';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse, PaginatedResponse } from '@/types/common/api.types';
 import type {
   ValidateCheckoutPayload,
@@ -25,7 +26,7 @@ export const orderService = {
     payload: ValidateCheckoutPayload
   ): Promise<ApiResponse<ValidateCheckoutResponse>> {
     const response = await apiClient.post<ApiResponse<ValidateCheckoutResponse>>(
-      '/orders/validate-checkout',
+      ApiRoute.ORDERS.VALIDATE_CHECKOUT_ORDER,
       payload
     );
     return response.data;
@@ -44,7 +45,7 @@ export const orderService = {
     }
 
     const response = await apiClient.post<ApiResponse<PlaceOrderResponse>>(
-      '/orders/checkout',
+      ApiRoute.ORDERS.ORDER_CHECKOUT,
       payload,
       { headers }
     );
@@ -57,9 +58,12 @@ export const orderService = {
   async getOrders(
     params?: OrderListParams
   ): Promise<PaginatedResponse<OrderListItem>> {
-    const response = await apiClient.get<PaginatedResponse<OrderListItem>>('/orders', {
-      params,
-    });
+    const response = await apiClient.get<PaginatedResponse<OrderListItem>>(
+      ApiRoute.ORDERS.ORDERS,
+      {
+        params,
+      }
+    );
     return response.data;
   },
 
@@ -67,7 +71,9 @@ export const orderService = {
    * Fetch full order details by UUID.
    */
   async getOrderById(id: string): Promise<ApiResponse<OrderDetails>> {
-    const response = await apiClient.get<ApiResponse<OrderDetails>>(`/orders/${id}`);
+    const response = await apiClient.get<ApiResponse<OrderDetails>>(
+      ApiRoute.ORDERS.ORDER_DETAILS(id)
+    );
     return response.data;
   },
 
@@ -76,7 +82,7 @@ export const orderService = {
    */
   async getOrderByNumber(orderNumber: string): Promise<ApiResponse<OrderDetails>> {
     const response = await apiClient.get<ApiResponse<OrderDetails>>(
-      `/orders/number/${orderNumber}`
+      ApiRoute.ORDERS.ORDER_NUMBER(orderNumber)
     );
     return response.data;
   },
@@ -89,7 +95,7 @@ export const orderService = {
     payload: CancelOrderPayload
   ): Promise<ApiResponse<CancelOrderResponse>> {
     const response = await apiClient.post<ApiResponse<CancelOrderResponse>>(
-      `/orders/${id}/cancel`,
+      ApiRoute.ORDERS.ORDER_CANCEL(id),
       payload
     );
     return response.data;

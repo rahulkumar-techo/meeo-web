@@ -51,23 +51,23 @@ export const ResendOtpTimer: React.FC<ResendOtpTimerProps> = ({
   return (
     <div className="flex flex-col items-center gap-3 w-full text-center">
       {justResent && (
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-semibold animate-fade-in">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
           <CheckCircle2 className="w-3.5 h-3.5" />
           <span>New verification code dispatched!</span>
         </div>
       )}
 
       {secondsLeft > 0 ? (
-        <p className="text-xs sm:text-sm text-[#777588] dark:text-[#a6abbf]">
+        <p className="text-xs text-[#786C64]">
           Didn&apos;t receive code? Resend in{' '}
-          <span className="font-mono font-bold text-[#412ce7] dark:text-[#685aff]">
+          <span className="font-mono font-bold text-[#8C5338]">
             00:{secondsLeft < 10 ? `0${secondsLeft}` : secondsLeft}
           </span>
         </p>
       ) : (
         <div className="flex flex-col items-center gap-2 w-full">
-          <p className="text-xs font-medium text-[#464556] dark:text-[#a6abbf]">
-            Didn&apos;t receive the code? Select your preferred delivery method:
+          <p className="text-xs font-medium text-[#786C64]">
+            Didn&apos;t receive the code?
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -77,7 +77,7 @@ export const ResendOtpTimer: React.FC<ResendOtpTimerProps> = ({
                   type="button"
                   disabled={isLoading}
                   onClick={() => handleTriggerResend('sms')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#eaedff] dark:bg-[#1e273d] hover:bg-[#dae2fd] text-[#412ce7] dark:text-[#685aff] text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EFEAE4] hover:bg-[#EAE4DC] text-[#2D2621] text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
                   <span>Resend via SMS</span>
@@ -87,7 +87,7 @@ export const ResendOtpTimer: React.FC<ResendOtpTimerProps> = ({
                   type="button"
                   disabled={isLoading}
                   onClick={() => handleTriggerResend('whatsapp')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>Resend on WhatsApp</span>
@@ -98,10 +98,10 @@ export const ResendOtpTimer: React.FC<ResendOtpTimerProps> = ({
                 type="button"
                 disabled={isLoading}
                 onClick={() => handleTriggerResend('email')}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#eaedff] dark:bg-[#1e273d] hover:bg-[#dae2fd] text-[#412ce7] dark:text-[#685aff] text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#EFEAE4] hover:bg-[#EAE4DC] text-[#8C5338] text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
               >
                 <Mail className="w-3.5 h-3.5" />
-                <span>Resend to Email</span>
+                <span>Resend Code to Email</span>
               </button>
             )}
 
@@ -109,10 +109,10 @@ export const ResendOtpTimer: React.FC<ResendOtpTimerProps> = ({
               type="button"
               disabled={isLoading}
               onClick={() => handleTriggerResend(selectedChannel)}
-              className="inline-flex items-center gap-1 p-1.5 rounded-xl text-[#777588] hover:text-[#131b2e] dark:hover:text-white transition-colors"
+              className="inline-flex items-center gap-1 p-1.5 rounded-full text-[#786C64] hover:text-[#2D2621] transition-colors cursor-pointer"
               title="Refresh / Quick Resend"
             >
-              <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RotateCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

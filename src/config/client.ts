@@ -7,8 +7,9 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios"
 import { useUserStore } from "@/store/user.store"
 import type { ApiResponse } from "@/types/auth"
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://meeo-server.onrender.com/api/v1"
+import { ApiRoute, AppRoute } from "@/routes"
+
+export const API_BASE_URL = process.env.BACKEND_INTERNAL_URL || "https://meeo-server.onrender.com/api/v1"
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -17,7 +18,14 @@ export const apiClient = axios.create({
   },
   withCredentials: true,
   timeout: 30000,
-})
+});
+
+// Protected routes that require redirecting to login on 401
+const PROTECTED_ROUTES = [AppRoute.ACCOUNT, AppRoute.ORDERS, '/admin'];
+
+const isProtectedRoute = (pathname: string): boolean => {
+  return PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
+};
 
 // Variables for managing in-flight token refresh and request queue
 let isRefreshing = false
@@ -43,7 +51,7 @@ const processQueue = (error: unknown) => {
 export async function executeSilentRefresh(): Promise<{ success: boolean }> {
   // Directly hit the backend refresh route
   const response = await axios.post<ApiResponse<{ accessToken: string }>>(
-    `${API_BASE_URL}/auth/refresh`,
+    `${API_BASE_URL}${ApiRoute.AUTH.REFRESH}`,
     {},
     {
       withCredentials: true,
@@ -63,9 +71,8 @@ export async function executeSilentRefresh(): Promise<{ success: boolean }> {
 }
 
 import { getStoredCsrfToken } from "@/lib/csrf"
-import { getStoredSessionId, setSessionId } from "@/lib/session"
 
-// Request Interceptor: Attach Access Token, Guest Session, CSRF Token & Handle FormData
+// Request Interceptor: Attach Access Token, CSRF Token & Handle FormData
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = useUserStore.getState().accessToken;
@@ -74,39 +81,33 @@ apiClient.interceptors.request.use(
       config.headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Attach CSRF token for mutating requests if available
+    const url = config.url || "";
+    const method = (config.method || "get").toLowerCase();
+    const isMutating = ["post", "put", "patch", "delete"].includes(method);
+
+    // Attach CSRF token only for mutating requests (POST, PUT, PATCH, DELETE)
     const csrfToken = getStoredCsrfToken();
-    if (csrfToken && config.headers && !config.headers["X-CSRF-Token"]) {
+    if (isMutating && csrfToken && config.headers && !config.headers["X-CSRF-Token"]) {
       config.headers["X-CSRF-Token"] = csrfToken;
     }
 
     // When payload is FormData, delete Content-Type so browser/Axios sets multipart/form-data with boundary
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
       if (config.headers && typeof (config.headers as any).delete === "function") {
-        config.headers.delete("Content-Type")
+        config.headers.delete("Content-Type");
       } else if (config.headers) {
-        delete config.headers["Content-Type"]
+        delete config.headers["Content-Type"];
       }
     }
 
-    return config
+    return config;
   },
   (error) => Promise.reject(error)
-)
+);
 
 // Response Interceptor: Handle 401 & Silent Refresh via HttpOnly cookies
 apiClient.interceptors.response.use(
-  (response) => {
-    // Capture and save session ID from response
-    const returnedSession =
-      response.headers?.["x-session-id"] ||
-      (response.data as any)?.data?.sessionId ||
-      (response.data as any)?.sessionId;
-    if (returnedSession) {
-      setSessionId(returnedSession);
-    }
-    return response;
-  },
+  (response) => response,
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean
@@ -117,11 +118,11 @@ apiClient.interceptors.response.use(
     }
 
     const isAuthEndpoint =
-      originalRequest.url?.includes("/auth/login") ||
-      originalRequest.url?.includes("/auth/register") ||
-      originalRequest.url?.includes("/auth/refresh") ||
-      originalRequest.url?.includes("/auth/verify-otp") ||
-      originalRequest.url?.includes("/auth/reset-password")
+      originalRequest.url?.includes(ApiRoute.AUTH.LOGIN) ||
+      originalRequest.url?.includes(ApiRoute.AUTH.REGISTER) ||
+      originalRequest.url?.includes(ApiRoute.AUTH.REFRESH) ||
+      originalRequest.url?.includes(ApiRoute.AUTH.OTP_VERIFICATION) ||
+      originalRequest.url?.includes(ApiRoute.AUTH.RESET_PASSWORD)
 
     // Handle 401 Unauthorized for non-auth requests
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
@@ -157,15 +158,11 @@ apiClient.interceptors.response.use(
 
         if (
           typeof window !== "undefined" &&
-          !window.location.pathname.startsWith("/login") &&
-          !window.location.pathname.startsWith("/signup") &&
-          !window.location.pathname.startsWith("/verify-otp") &&
-          !window.location.pathname.startsWith("/forgot-password") &&
-          !window.location.pathname.startsWith("/reset-password")
+          isProtectedRoute(window.location.pathname)
         ) {
-          window.location.href = `/login?redirect=${encodeURIComponent(
+          window.location.href = AppRoute.AUTH.LOGIN_WITH_REDIRECT(
             window.location.pathname + window.location.search
-          )}`
+          )
         }
 
         return Promise.reject(refreshError)
@@ -179,15 +176,11 @@ apiClient.interceptors.response.use(
       useUserStore.getState().logout()
       if (
         typeof window !== "undefined" &&
-        !window.location.pathname.startsWith("/login") &&
-        !window.location.pathname.startsWith("/signup") &&
-        !window.location.pathname.startsWith("/verify-otp") &&
-        !window.location.pathname.startsWith("/forgot-password") &&
-        !window.location.pathname.startsWith("/reset-password")
+        isProtectedRoute(window.location.pathname)
       ) {
-        window.location.href = `/login?redirect=${encodeURIComponent(
+        window.location.href = AppRoute.AUTH.LOGIN_WITH_REDIRECT(
           window.location.pathname + window.location.search
-        )}`
+        )
       }
     }
 

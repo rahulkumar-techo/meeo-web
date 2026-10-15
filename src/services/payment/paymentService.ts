@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/config/client';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse } from '@/types/common/api.types';
 import type {
   InitializePaymentPayload,
@@ -21,7 +22,25 @@ export const paymentService = {
     payload: InitializePaymentPayload
   ): Promise<ApiResponse<InitializePaymentResponse>> {
     const response = await apiClient.post<ApiResponse<InitializePaymentResponse>>(
-      '/payments/initialize',
+      ApiRoute.PAYMENTS.INITIALIZE,
+      payload
+    );
+    return response.data;
+  },
+
+  /**
+   * Verify payment signature / transaction status.
+   */
+  async verifyPayment(payload: {
+    paymentId?: string;
+    orderId?: string;
+    razorpay_payment_id?: string;
+    razorpay_order_id?: string;
+    razorpay_signature?: string;
+    provider?: string;
+  }): Promise<ApiResponse<any>> {
+    const response = await apiClient.post<ApiResponse<any>>(
+      ApiRoute.PAYMENTS.VERIFY,
       payload
     );
     return response.data;
@@ -32,7 +51,22 @@ export const paymentService = {
    */
   async getPaymentStatus(paymentId: string): Promise<ApiResponse<PaymentDetails>> {
     const response = await apiClient.get<ApiResponse<PaymentDetails>>(
-      `/payments/${paymentId}`
+      ApiRoute.PAYMENTS.GET_PAYMENT(paymentId)
+    );
+    return response.data;
+  },
+
+  /**
+   * Record payment failure or dismissal.
+   */
+  async recordFailure(payload: {
+    orderId: string;
+    failureCode?: string;
+    failureMessage?: string;
+  }): Promise<ApiResponse<any>> {
+    const response = await apiClient.post<ApiResponse<any>>(
+      ApiRoute.PAYMENTS.FAIL,
+      payload
     );
     return response.data;
   },
@@ -44,7 +78,7 @@ export const paymentService = {
     payload: RetryPaymentPayload
   ): Promise<ApiResponse<RetryPaymentResponse>> {
     const response = await apiClient.post<ApiResponse<RetryPaymentResponse>>(
-      '/payments/retry',
+      ApiRoute.PAYMENTS.RETRY,
       payload
     );
     return response.data;

@@ -263,3 +263,152 @@ body.dark,
 .material-symbols-outlined.fill {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
+
+/* Meeo Motion Running Animations */
+@keyframes meeoFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(0.8deg);
+  }
+}
+
+@keyframes meeoAuraPulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.32;
+  }
+  50% {
+    transform: scale(1.18) rotate(180deg);
+    opacity: 0.52;
+  }
+}
+
+@keyframes meeoSheen {
+  0% {
+    transform: translateX(-140%) skewX(-25deg);
+  }
+  45%, 100% {
+    transform: translateX(260%) skewX(-25deg);
+  }
+}
+
+@keyframes meeoPulseSlow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.08);
+  }
+}
+
+.animate-meeo-float {
+  animation: meeoFloat 4.6s ease-in-out infinite;
+}
+
+.animate-meeo-aura {
+  animation: meeoAuraPulse 8.5s ease-in-out infinite alternate;
+}
+
+.animate-meeo-sheen {
+  animation: meeoSheen 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-meeo-pulse-slow {
+  animation: meeoPulseSlow 2.8s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   UrbanNest Premium Footwear & Lifestyle Design System
+   ========================================================================== */
+:root {
+  --urban-primary: #2D2621;
+  --urban-primary-dark: #1A1614;
+  --urban-primary-light: #F5EBE6;
+  --urban-secondary: #8C5338;
+  --urban-secondary-dark: #6E3F29;
+  --urban-accent: #C27838;
+  --urban-bg: #FAF8F5;
+  --urban-dark-bg: #120F0D;
+  --urban-surface: #FFFFFF;
+  --urban-subtle: #F3EFEA;
+  --urban-text-primary: #2D2621;
+  --urban-text-secondary: #786C64;
+  --urban-border: #E8E2DA;
+}
+
+.font-serif {
+  font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
+}
+
+.font-sans {
+  font-family: var(--font-plus-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Background utilities */
+.bg-urban-primary { background-color: #2D2621; }
+.bg-urban-primary-dark { background-color: #1A1614; }
+.bg-urban-primary-light { background-color: #F5EBE6; }
+.bg-urban-secondary { background-color: #8C5338; }
+.bg-urban-secondary-dark { background-color: #6E3F29; }
+.bg-urban-accent { background-color: #C27838; }
+.bg-urban-bg { background-color: #FAF8F5; }
+.bg-urban-surface { background-color: #FFFFFF; }
+.bg-urban-subtle { background-color: #F3EFEA; }
+
+/* Text utilities */
+.text-urban-primary { color: #2D2621; }
+.text-urban-secondary { color: #786C64; }
+.text-urban-accent { color: #C27838; }
+.text-urban-light { color: #F5EBE6; }
+
+/* Border utilities */
+.border-urban { border-color: #E8E2DA; }
+.border-urban-secondary { border-color: #8C5338; }
+
+/* Micro-animations */
+@keyframes urbanFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes urbanFloatSoft {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.4deg);
+  }
+}
+
+@keyframes urbanHaloGlow {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+.animate-urban-fadeInUp {
+  animation: urbanFadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-urban-float {
+  animation: urbanFloatSoft 6s ease-in-out infinite;
+}
+
+.animate-urban-halo {
+  animation: urbanHaloGlow 5s ease-in-out infinite alternate;
+}

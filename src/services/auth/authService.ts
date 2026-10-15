@@ -1,97 +1,129 @@
 /**
  * @file authService.ts
- * @description Customer authentication, session lifecycle, CSRF tokens, and credentials management.
+ * @description Authentication service communicating with Meeo server API endpoints.
  */
 
 import { apiClient, executeSilentRefresh } from '@/config/client';
-import { setStoredCsrfToken } from '@/lib/csrf';
-import type { ApiResponse } from '@/types/common/api.types';
+import { ApiRoute } from '@/routes';
 import type {
-  AuthUser,
-  CsrfResponse,
-  SignupPayload,
+  ApiResponse,
   LoginPayload,
+  RegisterPayload,
   VerifyOtpPayload,
   ResendOtpPayload,
   ForgotPasswordPayload,
   ResetPasswordPayload,
+  VerifyResetOtpPayload,
   AuthResponseData,
-} from '@/types/auth/auth.types';
+  AuthUser,
+  GoogleSignInPayload,
+  SetPasswordPayload,
+  ChangePasswordPayload,
+  LinkGooglePayload,
+  AuthProviderType,
+  AuthAccountsResponse,
+  UserSessionDevice,
+  UserSessionsListResponse,
+} from './auth.type';
 
 export const authService = {
   /**
-   * Obtain CSRF token for mutating requests.
-   */
-  async getCsrfToken(): Promise<CsrfResponse> {
-    try {
-      const response = await apiClient.get<CsrfResponse>('/auth/csrf');
-      if (response.data?.csrfToken) {
-        setStoredCsrfToken(response.data.csrfToken);
-      }
-      return response.data;
-    } catch {
-      return { success: false, csrfToken: '' };
-    }
-  },
-
-  /**
-   * Register a new customer account (/auth/signup or /auth/register).
-   */
-  async signup(payload: SignupPayload): Promise<ApiResponse<AuthResponseData>> {
-    try {
-      const response = await apiClient.post<ApiResponse<AuthResponseData>>('/auth/signup', payload);
-      return response.data;
-    } catch {
-      // Fallback route support
-      const fallback = await apiClient.post<ApiResponse<AuthResponseData>>('/auth/register', payload);
-      return fallback.data;
-    }
-  },
-
-  /**
-   * Alias for registration compatibility
-   */
-  async register(payload: SignupPayload): Promise<ApiResponse<AuthResponseData>> {
-    return this.signup(payload);
-  },
-
-  /**
-   * Authenticate customer with email and password.
+   * Log in user with email and password.
    */
   async login(payload: LoginPayload): Promise<ApiResponse<AuthResponseData>> {
-    const response = await apiClient.post<ApiResponse<AuthResponseData>>('/auth/login', payload);
+    // Keep device info within backend limit (max 100 chars)
+    const sanitizedPayload: LoginPayload = {
+      ...payload,
+      deviceName: payload.deviceName ? payload.deviceName.slice(0, 90) : undefined,
+      deviceId: payload.deviceId ? payload.deviceId.slice(0, 90) : undefined,
+    };
+    const response = await apiClient.post<ApiResponse<AuthResponseData>>(
+      ApiRoute.AUTH.LOGIN,
+      sanitizedPayload
+    );
     return response.data;
   },
 
   /**
-   * Verify email OTP passcode.
+   * Log in user with Google ID token.
+   */
+  async SignInWithGoogle(payload: GoogleSignInPayload): Promise<ApiResponse<AuthResponseData>> {
+    // Keep device info within backend limit (max 100 chars)
+    const sanitizedPayload: GoogleSignInPayload = {
+      ...payload,
+      deviceName: (payload.deviceName || 'Web Browser').slice(0, 90),
+      deviceId: (payload.deviceId || 'web-client').slice(0, 90),
+    };
+    const response = await apiClient.post<ApiResponse<AuthResponseData>>(
+      ApiRoute.AUTH.GOOGLE_AUTH,
+      sanitizedPayload
+    );
+    return response.data;
+  },
+
+  /**
+   * Register a new user account or refresh unverified details.
+   */
+  async register(payload: RegisterPayload): Promise<ApiResponse<{ user: AuthUser }>> {
+    const response = await apiClient.post<ApiResponse<{ user: AuthUser }>>(
+      ApiRoute.AUTH.REGISTER,
+      payload
+    );
+    return response.data;
+  },
+
+  /**
+   * Verify account activation OTP.
    */
   async verifyOtp(payload: VerifyOtpPayload): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>('/auth/verify-otp', payload);
+    const response = await apiClient.post<ApiResponse<null>>(
+      ApiRoute.AUTH.OTP_VERIFICATION,
+      payload
+    );
     return response.data;
   },
 
   /**
-   * Resend verification OTP code.
+   * Resend registration activation OTP.
    */
   async resendOtp(payload: ResendOtpPayload): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>('/auth/resend-otp', payload);
+    const response = await apiClient.post<ApiResponse<null>>(
+      ApiRoute.AUTH.RESEND_OTP,
+      payload
+    );
     return response.data;
   },
 
   /**
-   * Request password reset email.
+   * Request password recovery OTP.
    */
   async forgotPassword(payload: ForgotPasswordPayload): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>('/auth/forgot-password', payload);
+    const response = await apiClient.post<ApiResponse<null>>(
+      ApiRoute.AUTH.FORGOT_PASSWORD,
+      payload
+    );
     return response.data;
   },
 
   /**
-   * Reset account password with token/OTP.
+   * Validate password reset OTP without invalidating it.
+   */
+  async verifyResetOtp(payload: VerifyResetOtpPayload): Promise<ApiResponse<{ verified: boolean }>> {
+    const response = await apiClient.post<ApiResponse<{ verified: boolean }>>(
+      ApiRoute.AUTH.VERIFY_RESET_OTP,
+      payload
+    );
+    return response.data;
+  },
+
+  /**
+   * Finalize password reset with OTP and new password.
    */
   async resetPassword(payload: ResetPasswordPayload): Promise<ApiResponse<null>> {
-    const response = await apiClient.post<ApiResponse<null>>('/auth/reset-password', payload);
+    const response = await apiClient.post<ApiResponse<null>>(
+      ApiRoute.AUTH.RESET_PASSWORD,
+      payload
+    );
     return response.data;
   },
 
@@ -99,12 +131,12 @@ export const authService = {
    * Fetch current authenticated user profile.
    */
   async getMe(): Promise<ApiResponse<AuthUser>> {
-    const response = await apiClient.get<ApiResponse<AuthUser>>('/auth/me');
+    const response = await apiClient.get<ApiResponse<AuthUser>>(ApiRoute.AUTH.ME);
     return response.data;
   },
 
   /**
-   * Refresh session via HttpOnly cookie.
+   * Refresh authentication session via HttpOnly cookies.
    */
   async refreshToken(): Promise<ApiResponse<null>> {
     await executeSilentRefresh();
@@ -116,11 +148,11 @@ export const authService = {
   },
 
   /**
-   * Invalidate active customer session.
+   * Terminate current user session.
    */
   async logout(): Promise<ApiResponse<null>> {
     try {
-      const response = await apiClient.post<ApiResponse<null>>('/auth/logout');
+      const response = await apiClient.post<ApiResponse<null>>(ApiRoute.AUTH.LOGOUT);
       return response.data;
     } catch {
       return { success: true, message: 'Logged out locally' };
@@ -128,14 +160,93 @@ export const authService = {
   },
 
   /**
-   * Terminate all sessions across devices.
+   * Terminate all active user sessions across all devices.
    */
   async logoutAll(): Promise<ApiResponse<null>> {
     try {
-      const response = await apiClient.post<ApiResponse<null>>('/auth/logout-all');
+      const response = await apiClient.post<ApiResponse<null>>(ApiRoute.AUTH.LOGOUT_ALL);
       return response.data;
     } catch {
-      return { success: true, message: 'Logged out from all devices' };
+      try {
+        const fallback = await apiClient.post<ApiResponse<null>>(
+          ApiRoute.AUTH.LOGOUT,
+          { allDevices: true },
+          { params: { all: true } }
+        );
+        return fallback.data;
+      } catch {
+        return { success: true, message: 'Logged out from all devices' };
+      }
+    }
+  },
+
+  /**
+   * List all linked authentication providers.
+   */
+  async getAuthAccounts(): Promise<ApiResponse<AuthAccountsResponse>> {
+    const response = await apiClient.get<ApiResponse<AuthAccountsResponse>>(ApiRoute.AUTH.ACCOUNTS);
+    return response.data;
+  },
+
+  /**
+   * Set password for users registered via Google OAuth.
+   */
+  async setPassword(payload: SetPasswordPayload): Promise<ApiResponse<null>> {
+    const response = await apiClient.post<ApiResponse<null>>(ApiRoute.AUTH.SET_PASSWORD, payload);
+    return response.data;
+  },
+
+  /**
+   * Change current password (revokes other concurrent sessions).
+   */
+  async changePassword(payload: ChangePasswordPayload): Promise<ApiResponse<null>> {
+    const response = await apiClient.post<ApiResponse<null>>(ApiRoute.AUTH.CHANGE_PASSWORD, payload);
+    return response.data;
+  },
+
+  /**
+   * Link Google account to the logged-in profile.
+   */
+  async linkGoogle(payload: LinkGooglePayload): Promise<ApiResponse<null>> {
+    const response = await apiClient.post<ApiResponse<null>>(ApiRoute.AUTH.LINK_GOOGLE, payload);
+    return response.data;
+  },
+
+  /**
+   * Unlink an authentication provider.
+   */
+  async unlinkProvider(provider: AuthProviderType): Promise<ApiResponse<null>> {
+    const response = await apiClient.delete<ApiResponse<null>>(ApiRoute.AUTH.UNLINK_ACCOUNT(provider));
+    return response.data;
+  },
+
+  /**
+   * List active sessions for the current logged-in user.
+   */
+  async getSessions(): Promise<ApiResponse<UserSessionsListResponse | UserSessionDevice[]>> {
+    const response = await apiClient.get<ApiResponse<UserSessionsListResponse | UserSessionDevice[]>>(
+      ApiRoute.AUTH.SESSIONS
+    );
+    return response.data;
+  },
+
+  /**
+   * Revoke a specific active session.
+   */
+  async revokeSession(sessionId: string): Promise<ApiResponse<null>> {
+    const response = await apiClient.delete<ApiResponse<null>>(ApiRoute.AUTH.SESSION_ID(sessionId));
+    return response.data;
+  },
+
+  /**
+   * Revoke all active sessions across all devices.
+   */
+  async revokeAllSessions(): Promise<ApiResponse<null>> {
+    try {
+      const response = await apiClient.post<ApiResponse<null>>(ApiRoute.AUTH.REVOKE_ALL_SESSIONS);
+      return response.data;
+    } catch {
+      return await this.logoutAll();
     }
   },
 };

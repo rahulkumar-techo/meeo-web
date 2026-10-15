@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal';
 import { useSearchFilter } from '@/context/SearchFilterContext';
 import { useProductsQuery } from '@/hooks/catalog/useCatalog';
 import { extractArray } from '@/lib/apiHelper';
+import { AppRoute } from '@/routes';
 
 export const QuickSearchModal: React.FC = () => {
   const router = useRouter();
@@ -44,7 +45,7 @@ export const QuickSearchModal: React.FC = () => {
     setLocalQuery(query);
     setSearchQuery(query);
     closeSearchModal();
-    router.push(`/search?q=${encodeURIComponent(query)}`);
+    router.push(AppRoute.SEARCH(query));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

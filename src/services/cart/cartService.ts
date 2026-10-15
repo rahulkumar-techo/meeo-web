@@ -5,6 +5,7 @@
 
 import { apiClient } from '@/config/client';
 import { clearSessionId } from '@/lib/session';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse } from '@/types/common/api.types';
 import type {
   CartData,
@@ -22,7 +23,7 @@ export const cartService = {
    * Fetch active shopping cart with live subtotals, item discounts, and stock validation.
    */
   async getCart(): Promise<ApiResponse<CartData>> {
-    const response = await apiClient.get<ApiResponse<CartData>>('/cart');
+    const response = await apiClient.get<ApiResponse<CartData>>(ApiRoute.CART.CART);
     return response.data;
   },
 
@@ -30,7 +31,10 @@ export const cartService = {
    * Add a product variant to the cart.
    */
   async addToCart(payload: AddToCartPayload): Promise<ApiResponse<AddToCartResponse>> {
-    const response = await apiClient.post<ApiResponse<AddToCartResponse>>('/cart/items', payload);
+    const response = await apiClient.post<ApiResponse<AddToCartResponse>>(
+      ApiRoute.CART.CART_ITEMS,
+      payload
+    );
     return response.data;
   },
 
@@ -42,7 +46,7 @@ export const cartService = {
     payload: UpdateCartItemPayload
   ): Promise<ApiResponse<UpdateCartItemResponse>> {
     const response = await apiClient.patch<ApiResponse<UpdateCartItemResponse>>(
-      `/cart/items/${itemId}`,
+      ApiRoute.CART.UPDATE_CART_ITEMS(itemId),
       payload
     );
     return response.data;
@@ -53,7 +57,7 @@ export const cartService = {
    */
   async removeFromCart(itemId: string): Promise<ApiResponse<RemoveCartItemResponse>> {
     const response = await apiClient.delete<ApiResponse<RemoveCartItemResponse>>(
-      `/cart/items/${itemId}`
+      ApiRoute.CART.DELETE_CART_ITEMS(itemId)
     );
     return response.data;
   },
@@ -62,7 +66,7 @@ export const cartService = {
    * Empty the entire shopping cart.
    */
   async clearCart(): Promise<ApiResponse<null>> {
-    const response = await apiClient.delete<ApiResponse<null>>('/cart');
+    const response = await apiClient.delete<ApiResponse<null>>(ApiRoute.CART.CART);
     return response.data;
   },
 
@@ -71,7 +75,7 @@ export const cartService = {
    */
   async mergeGuestCart(payload: MergeCartPayload): Promise<ApiResponse<MergeCartResponse>> {
     const response = await apiClient.post<ApiResponse<MergeCartResponse>>(
-      '/cart/merge',
+      ApiRoute.CART.MERGE_CART,
       payload
     );
     if (response.data.success) {

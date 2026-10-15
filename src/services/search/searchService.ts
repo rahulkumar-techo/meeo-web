@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/config/client';
+import { ApiRoute } from '@/routes';
 import type { ApiResponse } from '@/types/common/api.types';
 import type {
   SearchParams,
@@ -18,9 +19,12 @@ export const searchService = {
    * Execute full-text multi-attribute product search with pagination.
    */
   async search(params: SearchParams): Promise<ApiResponse<SearchResultsData>> {
-    const response = await apiClient.get<ApiResponse<SearchResultsData>>('/search', {
-      params,
-    });
+    const response = await apiClient.get<ApiResponse<SearchResultsData>>(
+      ApiRoute.SEARCHES.SEARCH,
+      {
+        params,
+      }
+    );
     return response.data;
   },
 
@@ -29,7 +33,7 @@ export const searchService = {
    */
   async getSuggestions(query: string): Promise<ApiResponse<SearchSuggestionsData>> {
     const response = await apiClient.get<ApiResponse<SearchSuggestionsData>>(
-      '/search/suggestions',
+      ApiRoute.SEARCHES.SEARCH_SUGGESTIONS,
       {
         params: { q: query },
       }
@@ -41,9 +45,12 @@ export const searchService = {
    * Fetch contextual search facets (price boundaries, categories, brands, star ratings).
    */
   async getFacets(query?: string): Promise<ApiResponse<SearchFacetsData>> {
-    const response = await apiClient.get<ApiResponse<SearchFacetsData>>('/search/facets', {
-      params: query ? { q: query } : undefined,
-    });
+    const response = await apiClient.get<ApiResponse<SearchFacetsData>>(
+      ApiRoute.SEARCHES.SEARCH_FACETS,
+      {
+        params: query ? { q: query } : undefined,
+      }
+    );
     return response.data;
   },
 
@@ -51,7 +58,9 @@ export const searchService = {
    * Fetch featured promotional spotlight products.
    */
   async getFeatured(): Promise<ApiResponse<DiscoveryItem[]>> {
-    const response = await apiClient.get<ApiResponse<DiscoveryItem[]>>('/discovery/featured');
+    const response = await apiClient.get<ApiResponse<DiscoveryItem[]>>(
+      ApiRoute.DISCOVERY.DISCOVERY_FEATURED
+    );
     return response.data;
   },
 
@@ -59,7 +68,9 @@ export const searchService = {
    * Fetch high-velocity trending products.
    */
   async getTrending(): Promise<ApiResponse<DiscoveryItem[]>> {
-    const response = await apiClient.get<ApiResponse<DiscoveryItem[]>>('/discovery/trending');
+    const response = await apiClient.get<ApiResponse<DiscoveryItem[]>>(
+      ApiRoute.DISCOVERY.DISCOVERY_TRENDING
+    );
     return response.data;
   },
 
@@ -67,7 +78,9 @@ export const searchService = {
    * Fetch freshly cataloged new arrivals.
    */
   async getNewArrivals(): Promise<ApiResponse<DiscoveryItem[]>> {
-    const response = await apiClient.get<ApiResponse<DiscoveryItem[]>>('/discovery/new-arrivals');
+    const response = await apiClient.get<ApiResponse<DiscoveryItem[]>>(
+      ApiRoute.DISCOVERY.DISCOVERY_NEW_ARRIVALS
+    );
     return response.data;
   },
 
@@ -79,7 +92,7 @@ export const searchService = {
     limit = 4
   ): Promise<ApiResponse<DiscoveryItem[]>> {
     const response = await apiClient.get<ApiResponse<DiscoveryItem[]>>(
-      `/discovery/related/${productId}`,
+      ApiRoute.DISCOVERY.DISCOVERY_RELATED_PRODUCT(productId),
       {
         params: { limit },
       }

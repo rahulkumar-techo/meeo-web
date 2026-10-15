@@ -29,8 +29,13 @@ export const CheckoutOrderReview: React.FC<CheckoutOrderReviewProps> = ({
         {items.map((item) => (
           <div key={item.id} className="flex items-center gap-3">
             <img
-              src={item.product.images[0]}
-              alt={item.product.name}
+              src={
+                (Array.isArray(item.product?.images) && item.product.images[0]) ||
+                (item.product as any)?.image ||
+                (item.product as any)?.thumbnail ||
+                '/assets/urbannest/trending-nike-af1.jpg'
+              }
+              alt={item.product?.name || 'Product'}
               className="w-12 h-12 rounded-xl object-cover bg-[#f2f3ff] border border-[#e2e7ff] shrink-0"
             />
             <div className="min-w-0 flex-1">

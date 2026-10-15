@@ -44,12 +44,18 @@ export async function launchRazorpayModal(options: {
   currency?: string;
   name?: string;
   description?: string;
+  method?: string;
   prefill?: {
     name?: string;
     email?: string;
     contact?: string;
   };
-  onSuccess: (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void;
+  notes?: Record<string, string>;
+  onSuccess: (response: {
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
+  }) => void;
   onDismiss?: () => void;
 }): Promise<boolean> {
   const loaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
@@ -58,27 +64,93 @@ export async function launchRazorpayModal(options: {
     return false;
   }
 
-  const rzp = new window.Razorpay({
+  // If amount is already in paise (e.g. 164160 for ₹1,641.60), use as is; otherwise convert rupees to paise
+  const amountInPaise =
+    options.amount > 50000 && Number.isInteger(options.amount)
+      ? options.amount
+      : Math.round(options.amount * 100);
+
+  const rzpOptions: any = {
     key: options.keyId,
-    amount: Math.round(options.amount * 100),
+    amount: amountInPaise,
     currency: options.currency || 'INR',
     name: options.name || 'Meeo Store',
-    description: options.description || 'Order Payment',
+    description: options.description || 'Order Fulfillment',
     order_id: options.orderId,
-    prefill: options.prefill || {},
+    prefill: {
+      name: options.prefill?.name || '',
+      email: options.prefill?.email || '',
+      contact: options.prefill?.contact || '',
+      method: options.method || 'upi',
+    },
+    notes: options.notes || {},
     theme: {
       color: '#412ce7',
+      backdrop_color: '#0c101b',
+    },
+    config: {
+      display: {
+        blocks: {
+          upi: {
+            name: 'Pay via UPI / QR',
+            instruments: [
+              {
+                method: 'upi',
+              },
+            ],
+          },
+          netbanking: {
+            name: 'Netbanking (50+ Banks)',
+            instruments: [
+              {
+                method: 'netbanking',
+              },
+            ],
+          },
+          other: {
+            name: 'Cards & Wallets',
+            instruments: [
+              {
+                method: 'card',
+              },
+              {
+                method: 'wallet',
+              },
+            ],
+          },
+        },
+        sequence: ['block.upi', 'block.netbanking', 'block.other'],
+        preferences: {
+          show_default_blocks: true,
+        },
+      },
     },
     handler: function (response: any) {
-      options.onSuccess(response);
+      if (options.onSuccess) {
+        options.onSuccess(response);
+      }
     },
     modal: {
       ondismiss: function () {
-        if (options.onDismiss) options.onDismiss();
+        if (options.onDismiss) {
+          options.onDismiss();
+        }
       },
+      escape: true,
+      backdropclose: false,
     },
-  });
+  };
 
-  rzp.open();
-  return true;
+  try {
+    const RazorpayConstructor = (window as any).Razorpay;
+    const rzp = new RazorpayConstructor(rzpOptions);
+    rzp.on?.('payment.failed', function (resp: any) {
+      console.warn('Razorpay payment failed notice:', resp.error);
+    });
+    rzp.open();
+    return true;
+  } catch (err) {
+    console.error('Failed to initialize Razorpay checkout modal:', err);
+    return false;
+  }
 }

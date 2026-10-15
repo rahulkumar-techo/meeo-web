@@ -13,7 +13,10 @@ export const queryKeys = {
   auth: {
     all: ['auth'] as const,
     me: () => [...queryKeys.auth.all, 'me'] as const,
+    currentUser: () => [...queryKeys.auth.all, 'currentUser'] as const,
     csrf: () => [...queryKeys.auth.all, 'csrf'] as const,
+    accounts: () => [...queryKeys.auth.all, 'accounts'] as const,
+    sessions: () => [...queryKeys.auth.all, 'sessions'] as const,
   },
 
   // User Profile & Addresses

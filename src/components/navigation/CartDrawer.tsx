@@ -8,6 +8,7 @@ import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
+import { AppRoute } from '@/routes';
 
 export const CartDrawer: React.FC = () => {
   const router = useRouter();
@@ -41,7 +42,7 @@ export const CartDrawer: React.FC = () => {
 
   const handleCheckout = () => {
     closeCartDrawer();
-    router.push('/checkout');
+    router.push(AppRoute.CHECKOUT);
   };
 
   return (
@@ -112,7 +113,7 @@ export const CartDrawer: React.FC = () => {
             size="sm"
             onClick={() => {
               closeCartDrawer();
-              router.push('/category');
+              router.push(AppRoute.CATEGORY);
             }}
           >
             Explore Drops
@@ -150,8 +151,13 @@ export const CartDrawer: React.FC = () => {
                 className="flex items-start gap-3.5 p-3 rounded-xl bg-[#faf8ff] border border-[#e2e7ff] relative group"
               >
                 <img
-                  src={item.product.images[0]}
-                  alt={item.product.name}
+                  src={
+                    (Array.isArray(item.product?.images) && item.product.images[0]) ||
+                    (item.product as any)?.image ||
+                    (item.product as any)?.thumbnail ||
+                    '/assets/urbannest/trending-nike-af1.jpg'
+                  }
+                  alt={item.product?.name || 'Product'}
                   className="w-16 h-16 rounded-lg object-cover bg-white shrink-0 border border-[#e2e7ff]"
                 />
                 <div className="flex-1 min-w-0">

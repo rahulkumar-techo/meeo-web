@@ -1,33 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User,
   Mail,
   Lock,
-  Phone,
   Eye,
   EyeOff,
   ArrowRight,
-  Gift,
-  CheckCircle2,
   Sparkles,
 } from 'lucide-react';
-import { MeeoLogo } from '@/components/ui/MeeoLogo';
-import { Button } from '@/components/ui/Button';
 import { AuthVisualSide } from '@/features/auth/AuthVisualSide';
 import { SocialAuthButtons } from '@/features/auth/SocialAuthButtons';
 import { PasswordStrengthMeter } from '@/features/auth/PasswordStrengthMeter';
 import { useToast } from '@/context/ToastContext';
-import { useRegisterMutation } from '@/hooks/useAuthMutations';
+import { useRegisterMutation, useSignInWithGoogle } from '@/hooks/useAuthMutations';
+import { getDeviceInfo, formatApiErrorMessage } from '@/lib/device';
 
-export default function RegisterPage() {
+function RegisterFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect') || '/account';
   const { showToast } = useToast();
 
   const registerMutation = useRegisterMutation();
+  const signInWithGoogleMutation = useSignInWithGoogle();
 
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
@@ -37,7 +36,7 @@ export default function RegisterPage() {
   const [agreeTerms, setAgreeTerms] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  const isSubmitting = registerMutation.isPending;
+  const isSubmitting = registerMutation.isPending || signInWithGoogleMutation.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +63,7 @@ export default function RegisterPage() {
     }
 
     if (!agreeTerms) {
-      setErrorMsg('Please agree to the Studio Collector Terms to continue');
+      setErrorMsg('Please agree to the UrbanNest Member Terms to continue');
       return;
     }
 
@@ -77,9 +76,11 @@ export default function RegisterPage() {
       },
       {
         onSuccess: () => {
-          showToast(`Account created! A verification OTP has been dispatched to ${email.trim()}`);
+          showToast(`Account created! Verification code dispatched to ${email.trim()}`, 'success');
           router.push(
-            `/verify-otp?mode=register&dest=${encodeURIComponent(email.trim())}&redirect=/account`
+            `/verify-otp?mode=register&dest=${encodeURIComponent(
+              email.trim()
+            )}&redirect=${encodeURIComponent(redirectPath)}`
           );
         },
         onError: (err: any) => {
@@ -96,63 +97,69 @@ export default function RegisterPage() {
     );
   };
 
-  const handleSocialAuth = (provider: 'google' | 'apple' | 'passkey') => {
-    showToast(`${provider.toUpperCase()} single sign-on redirecting...`);
-    if (typeof window !== 'undefined') {
-      window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://meeo-server.onrender.com/api/v1'}/auth/${provider}`;
-    }
+  const handleGoogleSuccess = (idToken: string) => {
+    setErrorMsg('');
+    const { deviceName, deviceId } = getDeviceInfo();
+
+    signInWithGoogleMutation.mutate(
+      { idToken, deviceName, deviceId },
+      {
+        onSuccess: (res) => {
+          showToast(`Welcome to UrbanNest, ${res.data?.user?.firstName || 'Member'}!`, 'success');
+          router.push(redirectPath);
+        },
+        onError: (err: any) => {
+          const apiMsg = formatApiErrorMessage(err, 'Google registration could not be completed.');
+          setErrorMsg(apiMsg);
+          showToast(apiMsg, 'error');
+        },
+      }
+    );
   };
 
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-      {/* Visual Side Banner (Left) */}
-      <div className="lg:col-span-6 xl:col-span-7 flex">
+    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch max-w-5xl">
+      {/* Editorial Visual Showcase on Left */}
+      <div className="lg:col-span-6 xl:col-span-6 flex">
         <AuthVisualSide
-          heading="Join 18,400+ Curators & Design Collectors."
-          subheading="Creating an account grants you early drop notifications, priority dispatch routing, digital vault warranties, and 200 welcome Studio Points."
-          badge="Collector Onboarding"
+          heading="Join the UrbanNest Footwear Collective."
+          subheading="Become an exclusive member to unlock member-only archival drops, complimentary sizing exchanges, and personal tier rewards."
+          badge="UrbanNest Membership"
         />
       </div>
 
-      {/* Register Form Card (Right) */}
-      <div className="lg:col-span-6 xl:col-span-5 flex flex-col justify-center">
-        <div className="w-full bg-white dark:bg-[#131826] rounded-3xl p-6 sm:p-10 border border-[#e2e7ff] dark:border-[#28334d] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)]">
-          {/* Header */}
-          <div className="flex flex-col gap-2 mb-6">
-            <div className="flex items-center justify-between">
-              <MeeoLogo size="md" />
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#faf8ff] dark:bg-[#182032] border border-[#e2e7ff] dark:border-[#28334d] text-[11px] font-bold text-[#412ce7] dark:text-[#685aff]">
-                <Gift className="w-3.5 h-3.5 text-[#fd6a49]" />
-                <span>+200 Pts Bonus</span>
-              </div>
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-black text-[#131b2e] dark:text-white tracking-tight mt-2">
-              Create Account<span className="text-[#fd6a49]">.</span>
+      {/* Register Form Card on Right */}
+      <div className="lg:col-span-6 xl:col-span-6 flex flex-col justify-center">
+        <div className="w-full bg-white rounded-3xl p-6 sm:p-9 border border-[#E8E2DA] shadow-sm">
+          <div className="flex flex-col gap-1.5 mb-6">
+            <Link
+              href="/"
+              className="font-serif text-2xl font-bold tracking-tight text-[#2D2621]"
+            >
+              UrbanNest
+            </Link>
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D2621] tracking-tight mt-3">
+              Create an account<span className="text-[#8C5338]">.</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#464556] dark:text-[#a6abbf]">
-              Join the studio to unlock exclusive drops and tactile objects.
+            <p className="text-xs sm:text-sm text-[#786C64]">
+              Join thousands of discerning sneaker and lifestyle enthusiasts.
             </p>
           </div>
 
-          {/* Error Notice */}
           {errorMsg && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-              <span>{errorMsg}</span>
+            <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+              {errorMsg}
             </div>
           )}
 
-          {/* Registration Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {/* First & Last Name row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-[#2D2621] mb-1.5">
                   First Name
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#786C64]">
                     <User className="w-4 h-4" />
                   </div>
                   <input
@@ -160,39 +167,33 @@ export default function RegisterPage() {
                     required
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Milo"
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
+                    placeholder="Rahul"
+                    className="w-full h-11 pl-10 pr-3 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] focus:bg-white text-xs text-[#2D2621] placeholder:text-[#786C64] focus:outline-none focus:border-[#8C5338] focus:ring-1 focus:ring-[#8C5338]/20 transition-all"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
+              <div>
+                <label className="block text-xs font-bold text-[#2D2621] mb-1.5">
                   Last Name
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Kapoor"
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Kumar"
+                  className="w-full h-11 px-3.5 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] focus:bg-white text-xs text-[#2D2621] placeholder:text-[#786C64] focus:outline-none focus:border-[#8C5338] focus:ring-1 focus:ring-[#8C5338]/20 transition-all"
+                />
               </div>
             </div>
 
-            {/* Email Address */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
+            <div>
+              <label className="block text-xs font-bold text-[#2D2621] mb-1.5">
                 Email Address
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#786C64]">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -200,19 +201,18 @@ export default function RegisterPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="milo.kapoor@studio.meeo"
-                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
+                  placeholder="name@example.com"
+                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] focus:bg-white text-xs text-[#2D2621] placeholder:text-[#786C64] focus:outline-none focus:border-[#8C5338] focus:ring-1 focus:ring-[#8C5338]/20 transition-all"
                 />
               </div>
             </div>
 
-            {/* Password with Strength Meter */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#131b2e] dark:text-[#eef0ff]">
-                Security Password
+            <div>
+              <label className="block text-xs font-bold text-[#2D2621] mb-1.5">
+                Password
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#777588]">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#786C64]">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -220,75 +220,78 @@ export default function RegisterPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a strong passphrase"
-                  className="w-full h-11 pl-10 pr-11 rounded-xl border border-[#c7c4d9] dark:border-[#28334d] bg-white dark:bg-[#182032] text-[#131b2e] dark:text-white text-sm focus:border-[#412ce7] focus:ring-2 focus:ring-[#412ce7]/20 outline-none transition-all placeholder:text-[#777588]/60"
+                  placeholder="Create a strong password"
+                  className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] focus:bg-white text-xs text-[#2D2621] placeholder:text-[#786C64] focus:outline-none focus:border-[#8C5338] focus:ring-1 focus:ring-[#8C5338]/20 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#777588] hover:text-[#131b2e] dark:hover:text-white cursor-pointer"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#786C64] hover:text-[#2D2621] cursor-pointer"
+                  aria-label="Toggle password visibility"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-
-              {/* Live Strength Feedback */}
               <PasswordStrengthMeter password={password} />
             </div>
 
-            {/* Terms Agreement Checkbox */}
-            <div className="pt-2">
-              <label className="flex items-start gap-2 cursor-pointer select-none">
+            <div className="pt-1">
+              <label className="flex items-start gap-2.5 text-xs text-[#786C64] cursor-pointer">
                 <input
                   type="checkbox"
-                  required
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded text-[#412ce7] border-[#c7c4d9] focus:ring-[#412ce7] cursor-pointer"
+                  className="w-4 h-4 mt-0.5 rounded border-[#E8E2DA] accent-[#8C5338] cursor-pointer shrink-0"
                 />
-                <span className="text-[11px] text-[#464556] dark:text-[#a6abbf] leading-relaxed">
+                <span>
                   I agree to the{' '}
-                  <Link href="#" className="underline font-bold text-[#131b2e] dark:text-white">
-                    Collector Terms of Service
+                  <Link href="#" className="font-semibold text-[#8C5338] hover:underline">
+                    Member Terms
                   </Link>{' '}
-                  and understand how Meeo protects personal identity data.
+                  and Privacy Policy.
                 </span>
               </label>
             </div>
 
-            {/* Submit Register Button */}
-            <Button
+            <button
               type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={isSubmitting}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-              className="w-full mt-2"
+              disabled={isSubmitting}
+              className="w-full h-11.5 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
             >
-              Create Studio Account
-            </Button>
+              <span>{isSubmitting ? 'Creating Account...' : 'Create UrbanNest Account'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </form>
 
-          {/* Social Sign up */}
           <div className="mt-6">
-            <SocialAuthButtons onSocialAuth={handleSocialAuth} isLoading={isSubmitting} />
+            <SocialAuthButtons onGoogleSuccess={handleGoogleSuccess} isLoading={isSubmitting} />
           </div>
 
-          {/* Login Navigation Link */}
-          <div className="mt-6 pt-5 border-t border-[#e2e7ff] dark:border-[#28334d] text-center">
-            <p className="text-xs text-[#464556] dark:text-[#a6abbf]">
-              Already have a collector account?{' '}
-              <Link
-                href="/login"
-                className="font-bold text-[#412ce7] dark:text-[#685aff] hover:underline"
-              >
-                Sign In
-              </Link>
-            </p>
+          <div className="pt-6 mt-6 border-t border-[#E8E2DA] text-center text-xs text-[#786C64]">
+            <span>Already have an account? </span>
+            <Link
+              href={`/login?redirect=${encodeURIComponent(redirectPath)}`}
+              className="font-bold text-[#8C5338] hover:underline"
+            >
+              Sign In
+            </Link>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full min-h-[400px] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#8C5338] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RegisterFormContent />
+    </Suspense>
   );
 }

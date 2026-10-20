@@ -9,8 +9,24 @@ import type { ApiResponse } from "@/types/auth"
 
 import { ApiRoute, AppRoute } from "@/routes"
 
-export const API_BASE_URL = process.env.BACKEND_INTERNAL_URL ||"http://localhost:5000/api/v1"
-// || "https://meeo-server.onrender.com/api/v1"
+const normalizeApiUrl = (url?: string): string => {
+  const trimmed = (url || "").trim();
+  if (!trimmed) {
+    return "http://localhost:5000/api/v1";
+  }
+  // If a relative path is passed during server-side rendering, fallback to backend URL
+  if (typeof window === "undefined" && trimmed.startsWith("/")) {
+    return "http://localhost:5000/api/v1";
+  }
+  const clean = trimmed.replace(/\/+$/, "");
+  return clean.endsWith("/api/v1") ? clean : `${clean}/api/v1`;
+};
+
+export const API_BASE_URL = normalizeApiUrl(
+  process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL ||
+  process.env.BACKEND_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_API_URL
+);
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

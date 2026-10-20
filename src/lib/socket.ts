@@ -3,6 +3,8 @@
  * @description WebSocket / Real-time client manager for order tracking, push alerts, and status changes.
  */
 
+import { API_BASE_URL } from '@/config/client';
+
 export type OrderEventType =
   | 'order.confirmed'
   | 'order.processing'
@@ -47,8 +49,10 @@ class RealtimeSocketManager {
     this.token = token || null;
     let wsBaseUrl = url || process.env.NEXT_PUBLIC_WS_URL;
     if (!wsBaseUrl) {
-      if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith('http')) {
-        wsBaseUrl = process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws').replace(/\/api\/v1$/, '');
+      if (API_BASE_URL && API_BASE_URL.startsWith('http')) {
+        wsBaseUrl = API_BASE_URL.replace(/^http/, 'ws').replace(/\/api\/v1\/?$/, '');
+      } else if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith('http')) {
+        wsBaseUrl = process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws').replace(/\/api\/v1\/?$/, '');
       } else if (typeof window !== 'undefined') {
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         wsBaseUrl = `${proto}//${window.location.host}`;

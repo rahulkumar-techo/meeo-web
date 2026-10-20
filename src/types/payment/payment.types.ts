@@ -71,5 +71,18 @@ export interface RetryPaymentResponse {
   paymentId: string;
   attemptNumber: number;
   status: string;
+  providerOrderId?: string;
   gatewayData?: PaymentGatewayData;
+}
+
+export interface VerifyPaymentPayload {
+  orderId?: string;
+  paymentId?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
+  provider?: string;
 }

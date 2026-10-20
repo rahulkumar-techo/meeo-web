@@ -20,4 +20,6 @@ export interface CartSummary {
   couponCode?: string;
   isFreeShippingUnlocked: boolean;
   amountNeededForFreeShipping: number;
+  freeShippingThreshold?: number;
+  standardShippingFee?: number;
 }

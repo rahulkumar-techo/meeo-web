@@ -8,6 +8,7 @@ import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
+import { usePublicSettings } from '@/hooks/settings/usePublicSettings';
 import { AppRoute } from '@/routes';
 
 export const CartDrawer: React.FC = () => {
@@ -23,24 +24,29 @@ export const CartDrawer: React.FC = () => {
     removeCoupon,
   } = useCart();
   const { showToast } = useToast();
+  const { standardShippingFee, freeShippingThreshold } = usePublicSettings();
 
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
 
-  const handleApplyPromo = (e: React.FormEvent) => {
+  const handleApplyPromo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoInput.trim()) return;
-    const success = applyCoupon(promoInput);
+    const success = await applyCoupon(promoInput);
     if (success) {
       showToast(`Coupon ${promoInput.toUpperCase()} applied!`);
       setPromoInput('');
       setPromoError('');
     } else {
-      setPromoError('Invalid code. Try STUDIO1000 or WELCOME500');
+      setPromoError('Invalid or expired coupon code');
     }
   };
 
   const handleCheckout = () => {
+    if (items.length === 0) {
+      showToast('Your cart is empty. Please add items before checking out.');
+      return;
+    }
     closeCartDrawer();
     router.push(AppRoute.CHECKOUT);
   };
@@ -70,12 +76,12 @@ export const CartDrawer: React.FC = () => {
               </div>
             )}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-[#464556]">Air Priority Shipping</span>
+              <span className="text-[#464556]">Delivery Fee</span>
               <span className="font-semibold text-[#131b2e]">
-                {summary.shipping === 0 ? (
+                {summary.subtotal >= freeShippingThreshold || summary.shipping === 0 ? (
                   <span className="text-green-600 font-bold">FREE</span>
                 ) : (
-                  `₹${summary.shipping}`
+                  `₹${standardShippingFee}`
                 )}
               </span>
             </div>
@@ -121,23 +127,23 @@ export const CartDrawer: React.FC = () => {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {/* Free Shipping Progress Indicator */}
+          {/* Free Shipping Progress Banner */}
           <div className="p-3.5 rounded-xl bg-[#eaedff]/60 border border-[#dae2fd]">
             <div className="flex items-center justify-between text-xs font-semibold text-[#131b2e] mb-1.5">
               <span>
-                {summary.isFreeShippingUnlocked ? (
-                  <span className="text-[#412ce7] font-bold">✓ Free Express Shipping Unlocked</span>
+                {summary.subtotal >= freeShippingThreshold ? (
+                  <span className="text-[#412ce7] font-bold">✓ Free Delivery Unlocked</span>
                 ) : (
-                  <>Add ₹{summary.amountNeededForFreeShipping.toLocaleString('en-IN')} for Free Express Delivery</>
+                  <>Add ₹{(freeShippingThreshold - summary.subtotal).toLocaleString('en-IN')} more to get FREE Delivery!</>
                 )}
               </span>
-              <span>{Math.min(100, Math.round((summary.subtotal / 5000) * 100))}%</span>
+              <span>{Math.min(100, Math.round((summary.subtotal / freeShippingThreshold) * 100))}%</span>
             </div>
             <div className="w-full h-2 bg-white rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#412ce7] rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, (summary.subtotal / 5000) * 100)}%`,
+                  width: `${Math.min(100, (summary.subtotal / freeShippingThreshold) * 100)}%`,
                 }}
               />
             </div>
@@ -155,7 +161,7 @@ export const CartDrawer: React.FC = () => {
                     (Array.isArray(item.product?.images) && item.product.images[0]) ||
                     (item.product as any)?.image ||
                     (item.product as any)?.thumbnail ||
-                    '/assets/urbannest/trending-nike-af1.jpg'
+                    '/assets/meeo-icon.svg'
                   }
                   alt={item.product?.name || 'Product'}
                   className="w-16 h-16 rounded-lg object-cover bg-white shrink-0 border border-[#e2e7ff]"

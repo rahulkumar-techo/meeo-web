@@ -13,7 +13,7 @@ interface AuthVisualSideProps {
 export const AuthVisualSide: React.FC<AuthVisualSideProps> = ({
   heading = 'Every Step Begins With Exclusive Access.',
   subheading = 'Sign in to unlock curated member drops, private archive pricing, live order tracking, and complimentary priority delivery.',
-  badge = 'UrbanNest Member Access',
+  badge = 'Meeo Member Access',
 }) => {
   return (
     <div className="relative hidden lg:flex flex-col justify-between p-10 xl:p-12 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1A1614] via-[#26201B] to-[#2D2621] text-[#FAF8F5] shadow-xl min-h-[580px] w-full border border-[#3E342D]">
@@ -98,7 +98,7 @@ export const AuthVisualSide: React.FC<AuthVisualSideProps> = ({
           </div>
           <div>
             <p className="text-xs font-bold text-[#FAF8F5]">50,000+ Discerning Walkers</p>
-            <p className="text-[10px] text-[#E8E2DA]/70">Joined the UrbanNest Community</p>
+            <p className="text-[10px] text-[#E8E2DA]/70">Joined the Meeo Community</p>
           </div>
         </div>
 

@@ -4,9 +4,9 @@ import Image from 'next/image';
 import { ArrowRight, ShieldCheck, Sparkles, Feather, Recycle, HeartHandshake } from 'lucide-react';
 
 export const metadata = {
-  title: 'Our Story · UrbanNest Modern Lifestyle & Curated Goods',
+  title: 'Our Story · Meeo Modern Lifestyle & Curated Goods',
   description:
-    'Learn about UrbanNest: premium apparel, modern lifestyle essentials, and curated designs crafted for your everyday journey.',
+    'Learn about Meeo: premium apparel, modern lifestyle essentials, and curated designs crafted for your everyday journey.',
 };
 
 export default function AboutPage() {
@@ -20,20 +20,20 @@ export default function AboutPage() {
             Home
           </Link>
           <span>/</span>
-          <span className="text-[#2D2621] font-semibold">About UrbanNest</span>
+          <span className="text-[#2D2621] font-semibold">About Meeo</span>
         </nav>
 
         {/* Hero Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center mb-16 sm:mb-24">
           <div className="lg:col-span-6 space-y-6">
             <span className="text-xs uppercase tracking-[0.25em] font-bold text-[#8C5338]">
-              The UrbanNest Philosophy
+              The Meeo Philosophy
             </span>
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-[#2D2621] font-normal leading-[1.08] tracking-tight">
               Every Step<br />A Better You
             </h1>
             <p className="text-sm sm:text-base text-[#786C64] leading-relaxed max-w-xl">
-              UrbanNest was founded on a simple conviction: footwear should never compromise between enduring architectural aesthetics and effortless all-day comfort.
+              Meeo was founded on a simple conviction: footwear should never compromise between enduring architectural aesthetics and effortless all-day comfort.
             </p>
             <p className="text-sm text-[#786C64] leading-relaxed max-w-xl">
               We hand-select iconic heritage silhouettes from global pioneers like Nike, Adidas, New Balance, and Puma, alongside bespoke objects engineered for mindful urban living.
@@ -58,8 +58,8 @@ export default function AboutPage() {
 
           <div className="lg:col-span-6 relative aspect-4/3 rounded-3xl overflow-hidden shadow-lg border border-[#E8E2DA] bg-[#EFEAE4]">
             <Image
-              src="/assets/urbannest/promo-banner.jpg"
-              alt="UrbanNest Craftsmanship"
+              src="/assets/meeo/promo-banner.jpg"
+              alt="Meeo Craftsmanship"
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
@@ -96,7 +96,7 @@ export default function AboutPage() {
               Our Guiding Values
             </span>
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#2D2621] mt-2">
-              What Sets UrbanNest Apart
+              What Sets Meeo Apart
             </h2>
           </div>
 

@@ -13,6 +13,8 @@ import { catalogService } from '@/services/catalog/catalogService';
 import { useUserStore } from '@/store/user.store';
 import { mapBackendCartItem } from '@/lib/apiHelper';
 import { useToast } from '@/context/ToastContext';
+import { couponService } from '@/services/coupon/couponService';
+import { usePublicSettings } from '@/hooks/settings/usePublicSettings';
 import { AppRoute } from '@/routes';
 
 interface CartContextType {
@@ -23,7 +25,13 @@ interface CartContextType {
   summary: CartSummary;
   couponCode: string;
   appliedDiscount: number;
-  addToCart: (product: Product, quantity?: number, color?: string, size?: string) => Promise<void>;
+  addToCart: (
+    product: Product,
+    quantity?: number,
+    color?: string,
+    size?: string,
+    explicitVariantId?: string
+  ) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
   updateQuantity: (itemId: string, newQty: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -31,7 +39,7 @@ interface CartContextType {
   syncCartToBackend: () => Promise<boolean>;
   openCartDrawer: () => void;
   closeCartDrawer: () => void;
-  applyCoupon: (code: string) => boolean;
+  applyCoupon: (code: string) => Promise<boolean>;
   removeCoupon: () => void;
 }
 
@@ -248,6 +256,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [isInitialized, isAuthenticated, refreshCart]);
 
+  const { standardShippingFee, freeShippingThreshold } = usePublicSettings();
+
   const itemCount = useMemo(() => {
     return items.reduce((acc, item) => acc + (item.quantity || 1), 0);
   }, [items]);
@@ -257,10 +267,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (acc, item) => acc + (item.product?.price || 0) * (item.quantity || 1),
       0
     );
-    const freeShippingThreshold = 5000;
     const isFreeShippingUnlocked = subtotal >= freeShippingThreshold;
     const amountNeededForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
-    const shipping = isFreeShippingUnlocked || subtotal === 0 ? 0 : 250;
+    const shipping = isFreeShippingUnlocked || subtotal === 0 ? 0 : standardShippingFee;
     const discount = subtotal > 0 ? Math.min(appliedDiscount, subtotal) : 0;
     const estimatedTax = 0;
     const total = Math.max(0, subtotal - discount + shipping + estimatedTax);
@@ -274,10 +283,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       couponCode,
       isFreeShippingUnlocked,
       amountNeededForFreeShipping,
+      freeShippingThreshold,
+      standardShippingFee,
     };
-  }, [items, appliedDiscount, couponCode]);
+  }, [items, appliedDiscount, couponCode, freeShippingThreshold, standardShippingFee]);
 
-  const addToCart = async (product: Product, quantity = 1, color?: string, size?: string) => {
+  const addToCart = async (
+    product: Product,
+    quantity = 1,
+    color?: string,
+    size?: string,
+    explicitVariantId?: string
+  ) => {
     if (!product) return;
 
     // Login is compulsory: guests cannot add to cart
@@ -293,15 +310,50 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // 1. Resolve variant ID from product object or fetch details from server
+    // 1. Resolve variant ID from explicit parameter or matching attributes
     let targetVariantId =
-      (product as any)?.defaultVariantId ||
-      product.variants?.find(
-        (v: any) =>
-          (color && (v.title?.includes(color) || v.attributes?.some((a: any) => a.value === color))) ||
-          (size && (v.title?.includes(size) || v.attributes?.some((a: any) => a.value === size)))
-      )?.id ||
-      product.variants?.[0]?.id;
+      explicitVariantId ||
+      (product as any)?.selectedVariantId ||
+      (product as any)?.variantId;
+
+    if (!targetVariantId && (color || size) && product.variants?.length) {
+      const matched =
+        product.variants.find((v: any) => {
+          const matchCol =
+            !color ||
+            v.title?.toLowerCase().includes(color.toLowerCase()) ||
+            v.sku?.toLowerCase().includes(color.toLowerCase()) ||
+            v.attributes?.some((a: any) => a.value?.toLowerCase() === color.toLowerCase()) ||
+            v.attributes?.colors?.toLowerCase() === color.toLowerCase();
+          const matchSz =
+            !size ||
+            v.title?.toLowerCase().includes(size.toLowerCase()) ||
+            v.sku?.toLowerCase().includes(size.toLowerCase()) ||
+            v.attributes?.some((a: any) => a.value?.toLowerCase() === size.toLowerCase()) ||
+            v.attributes?.size?.toLowerCase() === size.toLowerCase();
+          return matchCol && matchSz;
+        }) ||
+        product.variants.find((v: any) => {
+          return (
+            (color &&
+              (v.title?.toLowerCase().includes(color.toLowerCase()) ||
+                v.attributes?.some((a: any) => a.value?.toLowerCase() === color.toLowerCase()))) ||
+            (size &&
+              (v.title?.toLowerCase().includes(size.toLowerCase()) ||
+                v.attributes?.some((a: any) => a.value?.toLowerCase() === size.toLowerCase())))
+          );
+        });
+      if (matched?.id) {
+        targetVariantId = matched.id;
+      }
+    }
+
+    // Fallback to defaultVariantId or first variant only if not yet found
+    if (!targetVariantId) {
+      targetVariantId =
+        (product as any)?.defaultVariantId ||
+        product.variants?.[0]?.id;
+    }
 
     if (!targetVariantId || !UUID_REGEX.test(targetVariantId)) {
       const lookupKey =
@@ -320,13 +372,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const serverVariants = prodRes?.data?.variants || prodRes?.variants || [];
           if (serverVariants.length > 0) {
             const matched =
+              (explicitVariantId && serverVariants.find((v: any) => v.id === explicitVariantId)) ||
               serverVariants.find(
                 (v: any) =>
                   (color &&
-                    (v.title?.includes(color) || v.attributes?.some((a: any) => a.value === color))) ||
+                    (v.title?.toLowerCase().includes(color.toLowerCase()) ||
+                      v.attributes?.some((a: any) => a.value?.toLowerCase() === color.toLowerCase()))) ||
                   (size &&
-                    (v.title?.includes(size) || v.attributes?.some((a: any) => a.value === size)))
-              ) || serverVariants[0];
+                    (v.title?.toLowerCase().includes(size.toLowerCase()) ||
+                      v.attributes?.some((a: any) => a.value?.toLowerCase() === size.toLowerCase())))
+              ) ||
+              serverVariants[0];
             targetVariantId = matched.id;
           }
         } catch (err) {
@@ -348,7 +404,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems((prev) => {
       const existingIndex = prev.findIndex(
         (i) =>
-          (i.variantId === targetVariantId || i.productId === product.id) &&
+          (i.variantId === targetVariantId || (i.productId === product.id && i.variantId === targetVariantId)) &&
           i.selectedColor === color &&
           i.selectedSize === size
       );
@@ -365,7 +421,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: tempId,
           productId: (product as any)?.productId || product.id,
           variantId: targetVariantId,
-          product,
+          product: {
+            ...product,
+            selectedVariantId: targetVariantId,
+          },
           quantity,
           selectedColor: color || product.colors?.[0]?.name,
           selectedSize: size || product.sizes?.[0]?.size,
@@ -462,19 +521,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openCartDrawer = () => setIsCartDrawerOpen(true);
   const closeCartDrawer = () => setIsCartDrawerOpen(false);
 
-  const applyCoupon = (code: string) => {
+  const applyCoupon = async (code: string): Promise<boolean> => {
     const clean = code.trim().toUpperCase();
-    if (clean === 'STUDIO1000' || clean === 'MEEO2026' || clean === 'SUMMER25') {
-      setCouponCode(clean);
-      setAppliedDiscount(1000);
-      return true;
+    if (!clean) return false;
+    try {
+      const res = await couponService.validateCoupon({
+        code: clean,
+        cartSubtotal: summary.subtotal,
+      });
+      const data = res?.data;
+      if (res?.success && data && data.isValid !== false) {
+        setCouponCode(clean);
+        setAppliedDiscount(Number(data.discountAmount ?? data.discountValue ?? 0));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
-    if (clean === 'WELCOME500' || clean === 'WELCOME10') {
-      setCouponCode(clean);
-      setAppliedDiscount(500);
-      return true;
-    }
-    return false;
   };
 
   const removeCoupon = () => {

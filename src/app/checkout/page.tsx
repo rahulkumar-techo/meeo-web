@@ -1,9 +1,9 @@
 import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { CheckoutView } from '@/components/urbannest/checkout/CheckoutView';
+import { CheckoutView } from '@/components/meeo/checkout/CheckoutView';
 
 export const metadata: Metadata = {
-  title: 'Secure Checkout · Meeo Store | UrbanNest',
+  title: 'Secure Checkout · Meeo E-Commerce',
   description:
     'Complete your order with verified delivery address, live coupon discounts, and secure Razorpay or Cash on Delivery payment.',
 };

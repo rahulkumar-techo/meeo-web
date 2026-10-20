@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { OrderTrackingView } from '@/features/orders/OrderTrackingView';
 
 export const metadata = {
-  title: 'Track Shipment · UrbanNest Orders',
+  title: 'Track Shipment · Meeo Orders',
   description: 'Monitor real-time shipment milestones, dispatch updates, and delivery ETA.',
 };
 

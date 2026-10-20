@@ -45,12 +45,17 @@ class RealtimeSocketManager {
     }
 
     this.token = token || null;
-    const wsBaseUrl =
-      url ||
-      process.env.NEXT_PUBLIC_WS_URL ||
-      (process.env.NEXT_PUBLIC_API_URL
-        ? process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws').replace(/\/api\/v1$/, '')
-        : 'ws://localhost:5000');
+    let wsBaseUrl = url || process.env.NEXT_PUBLIC_WS_URL;
+    if (!wsBaseUrl) {
+      if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith('http')) {
+        wsBaseUrl = process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws').replace(/\/api\/v1$/, '');
+      } else if (typeof window !== 'undefined') {
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsBaseUrl = `${proto}//${window.location.host}`;
+      } else {
+        wsBaseUrl = 'ws://localhost:5000';
+      }
+    }
 
     const fullUrl = this.token
       ? `${wsBaseUrl}/socket.io/?token=${encodeURIComponent(this.token)}&transport=websocket`
@@ -66,9 +71,18 @@ class RealtimeSocketManager {
 
       this.socket.onmessage = (event) => {
         try {
-          const parsed = JSON.parse(event.data);
-          if (parsed && parsed.event) {
-            this.emitLocal(parsed.event, parsed.data || parsed);
+          const raw = typeof event.data === 'string' ? event.data : '';
+          // Handle Socket.io Engine.io packet prefixes like '42["order.shipped", {...}]'
+          if (raw.startsWith('42')) {
+            const arr = JSON.parse(raw.substring(2));
+            if (Array.isArray(arr) && arr.length >= 2) {
+              this.emitLocal(arr[0], arr[1]);
+              return;
+            }
+          }
+          const parsed = JSON.parse(raw);
+          if (parsed && (parsed.event || parsed.type)) {
+            this.emitLocal(parsed.event || parsed.type, parsed.data || parsed.payload || parsed);
           }
         } catch {
           // Plain message handling

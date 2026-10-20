@@ -3,7 +3,7 @@
  * @description Customer profile, phone OTP verification, and address book types.
  */
 
-import { AuthUser } from '../auth/auth.types';
+export type { AuthUser } from '../auth/auth.types';
 
 export interface UpdateProfilePayload {
   firstName?: string;

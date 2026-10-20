@@ -2,8 +2,8 @@ import React from 'react';
 import { OrdersTab } from '@/features/account/OrdersTab';
 
 export const metadata = {
-  title: 'My Orders · UrbanNest',
-  description: 'Track, view details, and manage your UrbanNest purchases.',
+  title: 'My Orders · Meeo E-Commerce',
+  description: 'Track, view details, and manage your Meeo purchases.',
 };
 
 export default function OrdersPage() {

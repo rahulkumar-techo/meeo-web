@@ -4,15 +4,15 @@
  * Never injects hardcoded fake data. Gracefully handles missing fields with optional chaining.
  */
 
-import { UrbanNestProduct } from '@/data/urbanNestData';
-import { CatalogItem } from '@/data/urbanNestCatalog';
+import { MeeoProduct } from '@/data/meeoData';
+import { CatalogItem } from '@/data/meeoCatalog';
 import {
-  UrbanNestProductDetail,
+  MeeoProductDetail,
   FormattedProductVariant,
   ProductColorOption,
   ProductSizeOption,
   GalleryThumbnail,
-} from '@/data/urbanNestProductDetails';
+} from '@/data/meeoProductDetails';
 
 export interface ApiVariantImage {
   id?: string;
@@ -60,32 +60,19 @@ export interface ApiProduct {
 }
 
 /**
- * Returns a clean fallback product image if no images exist on the product or variant.
+ * Returns brand placeholder image if no images exist on the product or variant.
  */
-function getFallbackProductImage(name: string): string {
-  const lower = (name || '').toLowerCase();
-  if (lower.includes('apple') || lower.includes('airpod')) {
-    return 'https://ik.imagekit.io/ww7mydmoc/variants/9e7c1776-43e2-4c87-89bc-5f721aa29a01/images_pkv2CPTDR.jpg';
-  }
-  if (lower.includes('phone') || lower.includes('iphone')) {
-    return 'https://ik.imagekit.io/ww7mydmoc/variants/c1892dfd-d5e7-4abb-bace-55bd596f3ae7/iphone-17-finish-select-202509-sage_GEO_EMEA_lZBcwg9BR.webp';
-  }
-  if (lower.includes('headphone') || lower.includes('sonus')) {
-    return 'https://ik.imagekit.io/ww7mydmoc/variants/872c5e14-3737-4b94-8525-93fa0186b5b5/monitor-iii-anc-side-desktop-07_3d4fDpYkq.jpg';
-  }
-  if (lower.includes('airdopes') || lower.includes('boat')) {
-    return 'https://ik.imagekit.io/ww7mydmoc/products/292b67de-7490-4c6e-9aa4-da78b56d3fd0/variants/c16be05c-4c33-4332-9631-3873e6ed5c57.__CR0_0_600_450_PT0_SX600_V1____mNimxZvr4.png';
-  }
-  return '/assets/urbannest/trending-nike-af1.jpg';
+function getFallbackProductImage(_name?: string): string {
+  return '/assets/meeo-icon.svg';
 }
 
 /**
- * Maps raw backend product into an UrbanNestProduct for cards and listings.
+ * Maps raw backend product into a MeeoProduct for cards and listings.
  */
-export function mapApiProductToUrbanNestProduct(p: ApiProduct): UrbanNestProduct {
+export function mapApiProductToMeeoProduct(p: ApiProduct): MeeoProduct {
   const variant = p?.variants?.[0];
   const price = Number(variant?.price) || 0;
-  const originalPrice = Number(variant?.compareAtPrice) || (price > 0 ? Math.round(price * 1.2) : 0);
+  const originalPrice = Number(variant?.compareAtPrice) || price;
   const discount =
     originalPrice > price && originalPrice > 0
       ? `${Math.round(((originalPrice - price) / originalPrice) * 100)}% OFF`
@@ -95,14 +82,14 @@ export function mapApiProductToUrbanNestProduct(p: ApiProduct): UrbanNestProduct
     variant?.images?.[0]?.url ||
     p?.images?.[0]?.url ||
     p?.bannerImage?.url ||
-    getFallbackProductImage(p?.name || '');
+    getFallbackProductImage();
 
   const brandName =
     typeof p?.brand === 'object' && p?.brand !== null
       ? p.brand.name || 'Brand'
       : typeof p?.brand === 'string'
       ? p.brand
-      : p?.name?.split(' ')?.[0] || 'UrbanNest';
+      : p?.name?.split(' ')?.[0] || 'Meeo';
 
   const categoryName =
     typeof p?.category === 'object' && p?.category !== null
@@ -146,18 +133,18 @@ export function mapApiProductToUrbanNestProduct(p: ApiProduct): UrbanNestProduct
  * Maps raw backend product into a CatalogItem for catalog grid.
  */
 export function mapApiProductToCatalogItem(p: ApiProduct): CatalogItem {
-  const urbanProduct = mapApiProductToUrbanNestProduct(p);
+  const meeoProduct = mapApiProductToMeeoProduct(p);
   const brandName =
     typeof p?.brand === 'object' && p?.brand !== null
       ? p.brand.name || 'Brand'
       : typeof p?.brand === 'string'
       ? p.brand
-      : p?.name?.split(' ')?.[0] || 'UrbanNest';
+      : p?.name?.split(' ')?.[0] || 'Meeo';
 
   return {
-    ...urbanProduct,
+    ...meeoProduct,
     brand: brandName,
-    isDeal: Boolean(urbanProduct.originalPrice > urbanProduct.price),
+    isDeal: Boolean(meeoProduct.originalPrice > meeoProduct.price),
     isNewArrival: Boolean(p?.isFeatured),
     gender: 'unisex',
   };
@@ -168,7 +155,7 @@ export function mapApiProductToCatalogItem(p: ApiProduct): CatalogItem {
  * Guarantee: At least one variant is always present.
  * Uses optional chaining throughout and never substitutes fake hardcoded data.
  */
-export function mapApiProductToProductDetail(p: ApiProduct): UrbanNestProductDetail {
+export function mapApiProductToProductDetail(p: ApiProduct): MeeoProductDetail {
   const brandName =
     typeof p?.brand === 'object' && p?.brand !== null
       ? p.brand.name || 'Brand'
@@ -267,7 +254,7 @@ export function mapApiProductToProductDetail(p: ApiProduct): UrbanNestProductDet
 
   // If no images at all, add fallback
   if (imageSet.size === 0) {
-    imageSet.add(getFallbackProductImage(p?.name || ''));
+    imageSet.add(getFallbackProductImage());
   }
 
   const uniqueImageUrls = Array.from(imageSet);
@@ -406,7 +393,7 @@ export function mapApiProductToProductDetail(p: ApiProduct): UrbanNestProductDet
     specificationsGrouped: groupedSpecs,
     highlights,
     shippingInfo: {
-      freeShippingThreshold: 'Free delivery on orders over ₹499.',
+      freeShippingThreshold: 'Free standard delivery on eligible orders.',
       deliveryTime: 'Usually delivered in 2–3 business days.',
       expressDelivery: 'Express 24-hr priority delivery available.',
       returnsWindow: '7-day replacement guarantee.',
@@ -414,3 +401,4 @@ export function mapApiProductToProductDetail(p: ApiProduct): UrbanNestProductDet
     },
   };
 }
+

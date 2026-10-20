@@ -46,7 +46,7 @@ export const CartItemList: React.FC<CartItemListProps> = ({
                   (Array.isArray(item.product?.images) && item.product.images[0]) ||
                   (item.product as any)?.image ||
                   (item.product as any)?.thumbnail ||
-                  '/assets/urbannest/trending-nike-af1.jpg'
+                  '/assets/meeo-icon.svg'
                 }
                 alt={item.product?.name || 'Product'}
                 className="w-full h-full object-cover"

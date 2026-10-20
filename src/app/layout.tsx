@@ -46,10 +46,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
   title: {
-    default: 'UrbanNest · Modern Lifestyle, Apparel & Curated Essentials',
-    template: '%s | UrbanNest',
+    default: 'Meeo E-Commerce · Modern Lifestyle, Apparel & Curated Essentials',
+    template: '%s | Meeo',
   },
-  description: 'UrbanNest: Curated collections of premium apparel, lifestyle goods, electronics, and home essentials.',
+  description: 'Meeo: Curated collections of premium apparel, lifestyle goods, electronics, and home essentials.',
   keywords: SITE_CONFIG.keywords,
   authors: SITE_CONFIG.authors,
   creator: SITE_CONFIG.creator,

@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { UrbanNestFooter } from '../urbannest/UrbanNestFooter';
+import { MeeoFooter } from '../meeo/MeeoFooter';
 
 export const Footer: React.FC = () => {
-  return <UrbanNestFooter />;
+  return <MeeoFooter />;
 };

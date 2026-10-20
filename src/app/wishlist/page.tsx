@@ -7,7 +7,7 @@ import { Heart, ShoppingBag, Trash2, ArrowRight, Star } from 'lucide-react';
 import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
-import type { CatalogItem } from '@/data/urbanNestCatalog';
+import type { CatalogItem } from '@/data/meeoCatalog';
 import { productService } from '@/services/product/productService';
 import { mapApiProductToCatalogItem } from '@/services/product/productAdapter';
 import { useUserStore } from '@/store/user.store';

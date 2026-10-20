@@ -40,6 +40,31 @@ const STATUS_FILTERS: Array<{ label: string; value?: OrderStatus }> = [
   { label: 'Cancelled', value: 'CANCELLED' },
 ];
 
+function OrderItemImage({ src, alt }: { src?: string | null; alt: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className="relative w-16 h-16 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] flex items-center justify-center text-[#A09383] shrink-0">
+        <Package className="w-6 h-6 stroke-[1.5]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-16 h-16 rounded-xl bg-white border border-[#E8E2DA] overflow-hidden p-1.5 shrink-0">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="64px"
+        className="object-contain p-1"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+}
+
 export const OrdersTab: React.FC = () => {
   const isAuthenticated = useUserStore((s) => s.isAuthenticated);
 
@@ -263,10 +288,10 @@ export const OrdersTab: React.FC = () => {
             }, 0);
 
             const rawTotal =
-              order.grandTotal ??
+              (order as any).financials?.grandTotal ??
+              (order.grandTotal && order.grandTotal > 0 ? order.grandTotal : undefined) ??
               order.totalAmount ??
               order.total ??
-              (order as any).financials?.grandTotal ??
               order.subtotal ??
               (order as any).amount;
 
@@ -296,10 +321,64 @@ export const OrdersTab: React.FC = () => {
                 })
               : 'Recent Order';
 
+            const deliveredHistory = order.statusHistory?.find(
+              (h: any) => h.newStatus === 'DELIVERED' || h.status === 'DELIVERED'
+            );
+            const deliveredDate = deliveredHistory?.createdAt || order.updatedAt;
+            const deliveredDateStr = deliveredDate
+              ? new Date(deliveredDate).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })
+              : null;
+
+            const getDeliveryStatus = () => {
+              if (order.status === 'DELIVERED') {
+                return {
+                  text: deliveredDateStr ? `Package Delivered on ${deliveredDateStr}` : 'Package Delivered',
+                  classes: 'text-emerald-700 font-semibold',
+                  icon: CheckCircle2,
+                };
+              }
+              if (order.status === 'CANCELLED') {
+                return {
+                  text: 'Order Cancelled',
+                  classes: 'text-red-600 font-semibold',
+                  icon: Ban,
+                };
+              }
+              if (order.tracking?.estimatedDelivery) {
+                return {
+                  text: `Expected arrival: ${order.tracking.estimatedDelivery}`,
+                  classes: 'text-[#8C5338] font-semibold',
+                  icon: Calendar,
+                };
+              }
+              if (order.status === 'SHIPPED') {
+                return {
+                  text: 'In Transit · Handed over to courier',
+                  classes: 'text-[#8C5338] font-semibold',
+                  icon: Truck,
+                };
+              }
+              if (order.status === 'PROCESSING') {
+                return {
+                  text: 'Processing & Packaging in warehouse',
+                  classes: 'text-[#8C5338] font-semibold',
+                  icon: Package,
+                };
+              }
+              return {
+                text: 'Order Confirmed · Ready for dispatch',
+                classes: 'text-[#8C5338] font-semibold',
+                icon: CheckCircle2,
+              };
+            };
+
+            const deliveryStatus = getDeliveryStatus();
+            const DeliveryStatusIcon = deliveryStatus.icon;
             const shippingAddress = order.shippingAddress || order.address;
-            const carrier = order.tracking?.carrier || 'Standard Express';
-            const trackingNum = order.tracking?.trackingNumber;
-            const eta = order.tracking?.estimatedDelivery || '2 - 3 Business Days';
 
             return (
               <div
@@ -324,8 +403,20 @@ export const OrdersTab: React.FC = () => {
                     </span>
 
                     {order.paymentStatus && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#786C64] px-2.5 py-1 rounded-full bg-white border border-[#E8E2DA]">
-                        {order.paymentStatus}
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                          order.paymentStatus === 'PAID' || order.status === 'DELIVERED'
+                            ? 'bg-emerald-50 text-[#2E6F40] border-emerald-200'
+                            : order.paymentMethod === 'COD'
+                            ? 'bg-amber-50 text-amber-900 border-amber-200'
+                            : 'bg-white text-[#786C64] border-[#E8E2DA]'
+                        }`}
+                      >
+                        {order.status === 'DELIVERED' || order.paymentStatus === 'PAID'
+                          ? 'Paid'
+                          : order.paymentMethod === 'COD'
+                          ? 'To be collected on delivery'
+                          : order.paymentStatus}
                       </span>
                     )}
                   </div>
@@ -336,47 +427,47 @@ export const OrdersTab: React.FC = () => {
                   <div className="divide-y divide-[#E8E2DA]/60 space-y-3 pt-1">
                     {itemsList.map((item: any, idx: number) => {
                       const itemName =
-                        item.title || item.productName || item.name || 'Premium Sneaker';
+                        item.productName || item.title || item.name || 'Product Item';
                       const itemImg =
                         item.thumbnailUrl ||
                         item.image ||
                         item.imageUrl ||
-                        '/assets/urbannest/trending-nike-af1.jpg';
+                        item.variantSnapshot?.thumbnail ||
+                        null;
                       const itemQty = Number(item.quantity ?? item.qty ?? 1);
                       const itemPrice = Number(
                         item.unitPrice ?? item.price ?? (item.totalPrice ? item.totalPrice / itemQty : 0)
                       );
                       const itemTotal = Number(item.totalPrice ?? itemPrice * itemQty);
+                      const variantAttributes = Array.isArray(item.variantSnapshot?.attributes)
+                        ? item.variantSnapshot.attributes
+                            .map((a: any) => `${a.attribute ? `${a.attribute}: ` : ''}${a.value}`)
+                            .join(', ')
+                        : item.variantTitle || '';
 
                       return (
                         <div key={idx} className="flex items-center gap-4 pt-3 first:pt-0">
-                          {/* Image Thumbnail */}
-                          <div className="relative w-16 h-16 rounded-xl bg-white border border-[#E8E2DA] overflow-hidden p-1.5 shrink-0">
-                            <Image
-                              src={itemImg}
-                              alt={itemName}
-                              fill
-                              sizes="64px"
-                              className="object-contain p-1"
-                              onError={(e: any) => {
-                                e.target.src = '/assets/urbannest/trending-nike-af1.jpg';
-                              }}
-                            />
-                          </div>
+                          {/* Image Thumbnail with clean placeholder if missing */}
+                          <OrderItemImage src={itemImg} alt={itemName} />
 
                           {/* Item Details */}
                           <div className="flex-1 min-w-0">
                             <h3 className="text-xs sm:text-sm font-bold text-[#2D2621] truncate">
                               {itemName}
                             </h3>
-                            <div className="text-[11px] text-[#786C64] mt-0.5 space-x-2">
+                            <div className="text-[11px] text-[#786C64] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                               {item.sku && <span>SKU: {item.sku}</span>}
-                              {item.variantTitle && <span>• {item.variantTitle}</span>}
+                              {variantAttributes && (
+                                <span className="inline-block bg-[#F3EFEA] text-[#786C64] px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                  {variantAttributes}
+                                </span>
+                              )}
                               <span>• Qty: {itemQty}</span>
                             </div>
-                            <p className="text-xs font-semibold text-[#8C5338] mt-0.5">
-                              {eta ? `Expected arrival: ${eta}` : 'Ready for dispatch'}
-                            </p>
+                            <div className={`text-xs mt-1 flex items-center gap-1.5 ${deliveryStatus.classes}`}>
+                              <DeliveryStatusIcon className="w-3.5 h-3.5 shrink-0" />
+                              <span>{deliveryStatus.text}</span>
+                            </div>
                           </div>
 
                           {/* Item Price */}
@@ -415,15 +506,21 @@ export const OrdersTab: React.FC = () => {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 text-[#786C64]">
-                      <Calendar className="w-4 h-4 text-[#8C5338] shrink-0" />
-                      <span>Estimated delivery: {eta}</span>
+                      <DeliveryStatusIcon className="w-4 h-4 text-[#8C5338] shrink-0" />
+                      <span>{deliveryStatus.text}</span>
                     </div>
                   )}
 
                   <div className="flex items-center sm:justify-end gap-2 text-[#786C64]">
                     <Truck className="w-4 h-4 text-[#8C5338] shrink-0" />
                     <span>
-                      {carrier} {trackingNum ? `· ${trackingNum}` : ''}
+                      {order.tracking?.carrier
+                        ? `${order.tracking.carrier}${order.tracking.trackingNumber ? ` · ${order.tracking.trackingNumber}` : ''}`
+                        : order.status === 'DELIVERED'
+                        ? 'Delivered to Doorstep'
+                        : order.status === 'SHIPPED'
+                        ? 'Dispatched with Logistics'
+                        : 'Standard Delivery'}
                     </span>
                   </div>
                 </div>

@@ -25,6 +25,8 @@ export interface Product {
   dropTimeRemaining?: string;
   tags: string[];
   variants?: any[];
+  selectedVariantId?: string;
+  defaultVariantId?: string;
 }
 
 export type SortOption =

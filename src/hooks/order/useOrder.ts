@@ -54,38 +54,67 @@ export function usePlaceOrderMutation() {
 /**
  * Fetch customer's paginated order history with status filters.
  */
-export function useOrdersQuery(params?: OrderListParams) {
+export function useOrdersQuery(params?: OrderListParams, options?: { live?: boolean }) {
   const isAuthenticated = useUserStore((s) => s.isAuthenticated);
 
   return useQuery<ApiResponse<OrderListResponseData>>({
     queryKey: queryKeys.orders.list(params),
     queryFn: () => orderService.getOrders(params),
     enabled: isAuthenticated,
-    staleTime: 60 * 1000,
+    staleTime: 5 * 1000,
+    refetchInterval: options?.live === false ? false : 5000,
+    refetchIntervalInBackground: false,
   });
 }
 
+export interface OrderQueryOptions {
+  live?: boolean;
+  refetchInterval?: number | false;
+}
+
 /**
- * Fetch full order details by UUID.
+ * Fetch full order details by UUID with live background auto-polling.
  */
-export function useOrderByIdQuery(id: string) {
+export function useOrderByIdQuery(id: string, options?: OrderQueryOptions) {
   return useQuery<ApiResponse<OrderDetails>>({
     queryKey: queryKeys.orders.detail(id),
     queryFn: () => orderService.getOrderById(id),
     enabled: Boolean(id),
-    staleTime: 30 * 1000,
+    staleTime: 3 * 1000,
+    refetchInterval: (query) => {
+      if (options?.refetchInterval !== undefined) return options.refetchInterval;
+      if (options?.live === false) return false;
+      const status = query.state.data?.data?.status;
+      // Stop polling once order is in final terminal state
+      if (status === 'DELIVERED' || status === 'CANCELLED') {
+        return false;
+      }
+      // Poll every 3 seconds for active orders
+      return 3000;
+    },
+    refetchIntervalInBackground: false,
   });
 }
 
 /**
- * Fetch full order details by order number.
+ * Fetch full order details by order number with live background auto-polling.
  */
-export function useOrderByNumberQuery(orderNumber: string) {
+export function useOrderByNumberQuery(orderNumber: string, options?: OrderQueryOptions) {
   return useQuery<ApiResponse<OrderDetails>>({
     queryKey: queryKeys.orders.byNumber(orderNumber),
     queryFn: () => orderService.getOrderByNumber(orderNumber),
     enabled: Boolean(orderNumber),
-    staleTime: 30 * 1000,
+    staleTime: 3 * 1000,
+    refetchInterval: (query) => {
+      if (options?.refetchInterval !== undefined) return options.refetchInterval;
+      if (options?.live === false) return false;
+      const status = query.state.data?.data?.status;
+      if (status === 'DELIVERED' || status === 'CANCELLED') {
+        return false;
+      }
+      return 3000;
+    },
+    refetchIntervalInBackground: false,
   });
 }
 

@@ -17,6 +17,8 @@ import { ResendOtpTimer } from '@/features/auth/ResendOtpTimer';
 import {
   useVerifyOtpMutation,
   useResendOtpMutation,
+  useVerifyResetOtpMutation,
+  useForgotPasswordMutation,
 } from '@/hooks/useAuthMutations';
 import { useToast } from '@/context/ToastContext';
 
@@ -24,22 +26,28 @@ function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const mode = searchParams.get('mode') || 'login';
-  const initialDest = searchParams.get('dest') || 'rahul.kumar@urbannest.com';
+  const mode = searchParams.get('mode') || 'register';
+  const initialDest = searchParams.get('dest') || searchParams.get('email') || '';
   const redirectPath = searchParams.get('redirect') || '/account';
 
   const { showToast } = useToast();
 
   const verifyOtpMutation = useVerifyOtpMutation();
+  const verifyResetOtpMutation = useVerifyResetOtpMutation();
   const resendOtpMutation = useResendOtpMutation();
+  const forgotPasswordMutation = useForgotPasswordMutation();
 
   const [destination, setDestination] = useState<string>(initialDest);
-  const [isEditingDest, setIsEditingDest] = useState<boolean>(false);
+  const [isEditingDest, setIsEditingDest] = useState<boolean>(!initialDest);
   const [editedDest, setEditedDest] = useState<string>(initialDest);
   const [otp, setOtp] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  const isSubmitting = verifyOtpMutation.isPending || resendOtpMutation.isPending;
+  const isSubmitting =
+    verifyOtpMutation.isPending ||
+    verifyResetOtpMutation.isPending ||
+    resendOtpMutation.isPending ||
+    forgotPasswordMutation.isPending;
 
   const titleByMode: Record<string, string> = {
     login: 'One-Time Login Code',
@@ -49,7 +57,7 @@ function VerifyOtpContent() {
 
   const subtitleByMode: Record<string, string> = {
     login: 'Enter the 4-digit security code sent to your registered email.',
-    register: 'Confirm your email to activate your UrbanNest membership.',
+    register: 'Confirm your email to activate your Meeo membership.',
     forgot_password: 'Enter the code to verify your identity and set a new password.',
   };
 
@@ -57,61 +65,109 @@ function VerifyOtpContent() {
     const code = codeToVerify || otp;
     setErrorMsg('');
 
+    if (!destination.trim()) {
+      setErrorMsg('Please specify your email address.');
+      setIsEditingDest(true);
+      return;
+    }
+
     if (code.length !== 4) {
       setErrorMsg('Please enter all 4 digits of your verification code');
       return;
     }
 
-    verifyOtpMutation.mutate(
-      {
-        email: destination,
-        otp: code,
-      },
-      {
-        onSuccess: () => {
-          showToast('Identity verified successfully!', 'success');
-          if (mode === 'forgot_password') {
-            router.push(
-              `/reset-password?dest=${encodeURIComponent(destination)}&otp=${encodeURIComponent(code)}`
-            );
-          } else if (mode === 'register') {
-            showToast('Account verified! Welcome to UrbanNest.', 'success');
-            router.push(redirectPath);
-          } else {
-            router.push(redirectPath);
-          }
-        },
-        onError: (err: any) => {
-          const apiMsg =
-            err.response?.data?.message ||
-            err.response?.data?.errors?.otp ||
-            err.message ||
-            'Invalid verification code. Please check and retry.';
-          setErrorMsg(apiMsg);
-          showToast(apiMsg, 'error');
-        },
-      }
-    );
-  };
-
-  const handleResend = async (channel: 'sms' | 'whatsapp' | 'email') => {
-    setErrorMsg('');
-    return new Promise<void>((resolve, reject) => {
-      resendOtpMutation.mutate(
-        { email: destination },
+    if (mode === 'forgot_password') {
+      verifyResetOtpMutation.mutate(
         {
-          onSuccess: (res) => {
-            showToast(res.message || 'New verification code dispatched!', 'success');
-            resolve();
+          email: destination.trim(),
+          otp: code,
+        },
+        {
+          onSuccess: () => {
+            showToast('Identity verified successfully!', 'success');
+            router.push(
+              `/reset-password?dest=${encodeURIComponent(destination.trim())}&otp=${encodeURIComponent(code)}`
+            );
           },
           onError: (err: any) => {
-            const apiMsg = err.response?.data?.message || err.message || 'Failed to resend code.';
+            const apiMsg =
+              err.response?.data?.message ||
+              err.response?.data?.errors?.otp ||
+              err.message ||
+              'Invalid verification code. Please check and retry.';
             setErrorMsg(apiMsg);
             showToast(apiMsg, 'error');
-            reject(err);
           },
         }
       );
+    } else {
+      verifyOtpMutation.mutate(
+        {
+          email: destination.trim(),
+          otp: code,
+        },
+        {
+          onSuccess: () => {
+            showToast('Account verified! Welcome to Meeo.', 'success');
+            router.push(redirectPath);
+          },
+          onError: (err: any) => {
+            const apiMsg =
+              err.response?.data?.message ||
+              err.response?.data?.errors?.otp ||
+              err.message ||
+              'Invalid verification code. Please check and retry.';
+            setErrorMsg(apiMsg);
+            showToast(apiMsg, 'error');
+          },
+        }
+      );
+    }
+  };
+
+  const handleResend = async () => {
+    setErrorMsg('');
+
+    if (!destination.trim()) {
+      setErrorMsg('Please enter your email address to resend the code.');
+      setIsEditingDest(true);
+      return Promise.reject(new Error('Email is required'));
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      if (mode === 'forgot_password') {
+        forgotPasswordMutation.mutate(
+          { email: destination.trim() },
+          {
+            onSuccess: (res) => {
+              showToast(res.message || 'New verification code dispatched!', 'success');
+              resolve();
+            },
+            onError: (err: any) => {
+              const apiMsg = err.response?.data?.message || err.message || 'Failed to resend code.';
+              setErrorMsg(apiMsg);
+              showToast(apiMsg, 'error');
+              reject(err);
+            },
+          }
+        );
+      } else {
+        resendOtpMutation.mutate(
+          { email: destination.trim() },
+          {
+            onSuccess: (res) => {
+              showToast(res.message || 'New verification code dispatched!', 'success');
+              resolve();
+            },
+            onError: (err: any) => {
+              const apiMsg = err.response?.data?.message || err.message || 'Failed to resend code.';
+              setErrorMsg(apiMsg);
+              showToast(apiMsg, 'error');
+              reject(err);
+            },
+          }
+        );
+      }
     });
   };
 
@@ -127,7 +183,7 @@ function VerifyOtpContent() {
         <AuthVisualSide
           heading="Secure One-Time Authentication."
           subheading="Enter the 4-digit verification passcode to unlock your session and continue your footwear journey."
-          badge="UrbanNest Security"
+          badge="Meeo Security"
         />
       </div>
 
@@ -139,7 +195,7 @@ function VerifyOtpContent() {
                 href="/"
                 className="font-serif text-2xl font-bold tracking-tight text-[#2D2621]"
               >
-                UrbanNest
+                Meeo
               </Link>
               <button
                 type="button"
@@ -165,7 +221,7 @@ function VerifyOtpContent() {
               </div>
               <div>
                 <p className="text-[10px] uppercase font-bold text-[#786C64]">Dispatched to</p>
-                <p className="text-xs font-bold text-[#2D2621]">{destination}</p>
+                <p className="text-xs font-bold text-[#2D2621]">{destination || 'No email provided'}</p>
               </div>
             </div>
             <button
@@ -173,7 +229,7 @@ function VerifyOtpContent() {
               onClick={() => setIsEditingDest(!isEditingDest)}
               className="text-xs font-semibold text-[#8C5338] hover:underline"
             >
-              Change
+              {destination ? 'Change' : 'Enter email'}
             </button>
           </div>
 

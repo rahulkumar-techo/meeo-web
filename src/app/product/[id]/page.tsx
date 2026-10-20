@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ProductDetailsView } from '@/components/urbannest/pdp/ProductDetailsView';
+import { ProductDetailsView } from '@/components/meeo/pdp/ProductDetailsView';
 import { productService } from '@/services/product/productService';
 import { mapApiProductToProductDetail } from '@/services/product/productAdapter';
 

@@ -17,8 +17,9 @@ export const ResendOtpTimer: React.FC<ResendOtpTimerProps> = ({
   isLoading = false,
 }) => {
   const [secondsLeft, setSecondsLeft] = useState<number>(initialSeconds);
+  const safeDest = destination || '';
   const [selectedChannel, setSelectedChannel] = useState<'sms' | 'whatsapp' | 'email'>(
-    destination.includes('@') ? 'email' : 'sms'
+    safeDest.includes('@') ? 'email' : 'sms'
   );
   const [justResent, setJustResent] = useState<boolean>(false);
 
@@ -46,7 +47,7 @@ export const ResendOtpTimer: React.FC<ResendOtpTimerProps> = ({
     [secondsLeft, isLoading, onResend, initialSeconds]
   );
 
-  const isEmail = destination.includes('@');
+  const isEmail = safeDest.includes('@');
 
   return (
     <div className="flex flex-col items-center gap-3 w-full text-center">

@@ -194,6 +194,11 @@ export const ApiRoute = {
     UPDATE_ADDRESS: (addressId: string) => `/user/addresses/${addressId}`,
     DELETE_ADDRESS: (addressId: string) => `/user/addresses/${addressId}`,
   },
+
+  // Public Storefront Settings
+  SETTINGS: {
+    PUBLIC: '/settings/public',
+  },
 } as const;
 
 export type ApiRouteType = typeof ApiRoute;

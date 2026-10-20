@@ -5,7 +5,7 @@
  * @description Comprehensive live order tracking interface with visual milestone stepper, carrier details, destination snapshot, and audit timeline.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -25,13 +25,16 @@ import {
   ShieldCheck,
   Building2,
 } from 'lucide-react';
-import { orderService } from '@/services/order/orderService';
+import { useOrderByIdQuery, useOrderByNumberQuery } from '@/hooks/order/useOrder';
+import { useOrderRealtime } from '@/hooks/order/useOrderRealtime';
+import { useToast } from '@/context/ToastContext';
 import { AppRoute } from '@/routes';
 import type { OrderDetails, OrderStatus } from '@/types/order/order.types';
 
 export const OrderTrackingView: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { showToast } = useToast();
 
   const initialQuery =
     searchParams.get('orderNumber') ||
@@ -41,59 +44,37 @@ export const OrderTrackingView: React.FC = () => {
 
   const [inputVal, setInputVal] = useState(initialQuery);
   const [activeQuery, setActiveQuery] = useState(initialQuery);
-  const [order, setOrder] = useState<OrderDetails | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedAwb, setCopiedAwb] = useState(false);
 
-  // Fetch order whenever activeQuery changes
+  const cleanQuery = activeQuery.trim();
+  const isUUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanQuery);
+
+  // Live order query with automated polling (every 3s for active orders)
+  const idQuery = useOrderByIdQuery(isUUID ? cleanQuery : '');
+  const numberQuery = useOrderByNumberQuery(!isUUID && cleanQuery ? cleanQuery : '');
+
+  const activeQueryResult = isUUID ? idQuery : numberQuery;
+  const order = (activeQueryResult.data?.data || null) as OrderDetails | null;
+  const loading = activeQueryResult.isLoading && Boolean(cleanQuery);
+
+  const errorMsg = cleanQuery && !activeQueryResult.isLoading && (activeQueryResult.isError || (activeQueryResult.isFetched && !order))
+    ? ((activeQueryResult.error as any)?.response?.data?.message || 'Order not found. Please verify the order reference number or ensure you are logged in.')
+    : null;
+
+  // Real-time WebSocket listener for immediate push events
+  useOrderRealtime(order?.id);
+
+  // Live status change toast notification
+  const prevStatusRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!activeQuery.trim()) {
-      setOrder(null);
-      setErrorMsg(null);
-      return;
+    if (order?.status) {
+      if (prevStatusRef.current && prevStatusRef.current !== order.status) {
+        showToast(`Live update: Order status changed to ${order.status}!`, 'info');
+      }
+      prevStatusRef.current = order.status;
     }
-
-    let isMounted = true;
-    setLoading(true);
-    setErrorMsg(null);
-
-    const isUUID =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        activeQuery.trim()
-      );
-
-    const fetchPromise = isUUID
-      ? orderService.getOrderById(activeQuery.trim())
-      : orderService.getOrderByNumber(activeQuery.trim());
-
-    fetchPromise
-      .then((res) => {
-        if (!isMounted) return;
-        if (res.data) {
-          setOrder(res.data);
-          setErrorMsg(null);
-        } else {
-          setOrder(null);
-          setErrorMsg(res.message || 'Order not found');
-        }
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setOrder(null);
-        setErrorMsg(
-          err?.response?.data?.message ||
-            'Order not found. Please verify the order reference number or ensure you are logged in.'
-        );
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeQuery]);
+  }, [order?.status, showToast]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,13 +139,21 @@ export const OrderTrackingView: React.FC = () => {
   const currencySymbol = order?.currency === 'USD' ? '$' : '₹';
   const totalAmount = order?.grandTotal ?? order?.totalAmount ?? 0;
 
-  // Fake tracking fallback if backend has null tracking
-  const trackingNumber =
-    order?.tracking?.trackingNumber ||
-    (order ? `DL-${order.orderNumber.replace(/[^a-zA-Z0-9]/g, '').slice(-8)}` : null);
-  const carrierName = order?.tracking?.carrier || 'UrbanExpress Logistics';
-  const estimatedDelivery =
-    order?.tracking?.estimatedDelivery || '2 - 3 Business Days';
+  const trackingNumber = order?.tracking?.trackingNumber || null;
+  const carrierName = order?.tracking?.carrier || null;
+  const estimatedDelivery = order?.tracking?.estimatedDelivery || null;
+
+  const deliveredHistory = order?.statusHistory?.find(
+    (h: any) => h.newStatus === 'DELIVERED' || h.status === 'DELIVERED'
+  );
+  const deliveredDate = deliveredHistory?.createdAt || (order?.status === 'DELIVERED' ? order.updatedAt : null);
+  const deliveredDateStr = deliveredDate
+    ? new Date(deliveredDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : null;
 
   return (
     <div className="w-full min-h-[75vh] bg-[#FAF8F5] py-8 sm:py-12">
@@ -271,28 +260,36 @@ export const OrderTrackingView: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex flex-col items-end">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border ${
-                      isCancelled
-                        ? 'bg-red-50 text-red-800 border-red-200'
-                        : order.status === 'DELIVERED'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        : 'bg-amber-50 text-amber-800 border-amber-200'
-                    }`}
-                  >
-                    {isCancelled ? (
-                      <Ban className="w-3.5 h-3.5" />
-                    ) : order.status === 'DELIVERED' ? (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    ) : (
-                      <Truck className="w-3.5 h-3.5" />
+                <div className="flex flex-col items-end gap-1.5">
+                  <div className="flex items-center gap-2">
+                    {!isCancelled && order.status !== 'DELIVERED' && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
+                        <span>Live Sync</span>
+                      </span>
                     )}
-                    <span>{order.status}</span>
-                  </span>
-                  <span className="text-xs font-bold text-[#2D2621] mt-1.5">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border ${
+                        isCancelled
+                          ? 'bg-red-50 text-red-800 border-red-200'
+                          : order.status === 'DELIVERED'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}
+                    >
+                      {isCancelled ? (
+                        <Ban className="w-3.5 h-3.5" />
+                      ) : order.status === 'DELIVERED' ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <Truck className="w-3.5 h-3.5" />
+                      )}
+                      <span>{order.status}</span>
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-[#2D2621]">
                     Total: {currencySymbol}
-                    {totalAmount.toLocaleString()}
+                    {(order.financials?.grandTotal ?? order.grandTotal ?? order.totalAmount ?? 0).toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
@@ -375,9 +372,11 @@ export const OrderTrackingView: React.FC = () => {
                   </span>
                   <div className="font-bold text-[#2D2621] flex items-center gap-1.5">
                     <Truck className="w-3.5 h-3.5 text-[#8C5338]" />
-                    <span>{carrierName}</span>
+                    <span>{carrierName || 'Meeo Air Express'}</span>
                   </div>
-                  <span className="text-[11px] text-[#786C64] block">Standard Air Express</span>
+                  <span className="text-[11px] text-[#786C64] block">
+                    {carrierName ? 'Assigned Courier' : 'Standard Air Express'}
+                  </span>
                 </div>
 
                 {/* Tracking / Waybill Number */}
@@ -404,19 +403,53 @@ export const OrderTrackingView: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  <span className="text-[11px] text-[#786C64] block">Live Courier Barcode</span>
+                  <span className="text-[11px] text-[#786C64] block">
+                    {trackingNumber ? 'Live Courier Barcode' : 'Available upon dispatch'}
+                  </span>
                 </div>
 
-                {/* Estimated Arrival */}
+                {/* Delivery Date / Status */}
                 <div className="space-y-1">
                   <span className="text-[10px] uppercase font-bold text-[#786C64] block">
-                    Estimated Delivery
+                    {order.status === 'DELIVERED'
+                      ? 'Delivered Date'
+                      : order.status === 'CANCELLED'
+                      ? 'Order Status'
+                      : 'Estimated Delivery'}
                   </span>
-                  <div className="font-bold text-[#8C5338] flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>{estimatedDelivery}</span>
+                  <div
+                    className={`font-bold flex items-center gap-1.5 ${
+                      order.status === 'DELIVERED'
+                        ? 'text-[#2E6F40]'
+                        : order.status === 'CANCELLED'
+                        ? 'text-red-600'
+                        : 'text-[#8C5338]'
+                    }`}
+                  >
+                    {order.status === 'DELIVERED' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6F40]" />
+                    ) : order.status === 'CANCELLED' ? (
+                      <Ban className="w-3.5 h-3.5" />
+                    ) : (
+                      <Calendar className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {order.status === 'DELIVERED'
+                        ? deliveredDateStr || 'Delivered'
+                        : order.status === 'CANCELLED'
+                        ? 'Cancelled'
+                        : estimatedDelivery || (order.status === 'SHIPPED' ? 'In Transit' : 'Processing')}
+                    </span>
                   </div>
-                  <span className="text-[11px] text-[#786C64] block">Guaranteed Window</span>
+                  <span className="text-[11px] text-[#786C64] block">
+                    {order.status === 'DELIVERED'
+                      ? 'Package handed to recipient'
+                      : order.status === 'CANCELLED'
+                      ? 'Terminated'
+                      : estimatedDelivery
+                      ? 'Guaranteed Window'
+                      : 'Pending courier schedule'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -471,22 +504,36 @@ export const OrderTrackingView: React.FC = () => {
                 </div>
 
                 <div className="divide-y divide-[#E8E2DA] max-h-48 overflow-y-auto">
-                  {order.items?.map((item) => (
-                    <div key={item.id} className="py-2.5 flex items-center justify-between text-xs gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-[#2D2621] truncate">
-                          {item.productName || item.title || 'Product Item'}
+                  {order.items?.map((item) => {
+                    const variantAttributes = Array.isArray((item as any).variantSnapshot?.attributes)
+                      ? (item as any).variantSnapshot.attributes
+                          .map((a: any) => `${a.attribute ? `${a.attribute}: ` : ''}${a.value}`)
+                          .join(', ')
+                      : (item as any).variantTitle || '';
+
+                    return (
+                      <div key={item.id} className="py-2.5 flex items-center justify-between text-xs gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-[#2D2621] truncate">
+                            {item.productName || item.title || 'Product Item'}
+                          </div>
+                          <div className="text-[11px] text-[#786C64] flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                            <span>Qty: {item.quantity}</span>
+                            {item.sku && <span>• SKU: {item.sku}</span>}
+                            {variantAttributes && (
+                              <span className="bg-[#F3EFEA] text-[#786C64] px-1.5 py-0.2 rounded text-[10px]">
+                                {variantAttributes}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-[#786C64]">
-                          Qty: {item.quantity} • SKU: {item.sku || 'N/A'}
+                        <div className="font-bold text-[#2D2621]">
+                          {currencySymbol}
+                          {(item.totalPrice || item.unitPrice * item.quantity).toLocaleString()}
                         </div>
                       </div>
-                      <div className="font-bold text-[#2D2621]">
-                        {currencySymbol}
-                        {(item.totalPrice || item.unitPrice * item.quantity).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

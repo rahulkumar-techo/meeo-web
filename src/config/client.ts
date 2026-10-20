@@ -9,7 +9,8 @@ import type { ApiResponse } from "@/types/auth"
 
 import { ApiRoute, AppRoute } from "@/routes"
 
-export const API_BASE_URL = process.env.BACKEND_INTERNAL_URL || "https://meeo-server.onrender.com/api/v1"
+export const API_BASE_URL = process.env.BACKEND_INTERNAL_URL ||"http://localhost:5000/api/v1"
+// || "https://meeo-server.onrender.com/api/v1"
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

@@ -16,6 +16,7 @@ import { addressService } from '@/services/user/addressService';
 import { orderService } from '@/services/order/orderService';
 import { paymentService } from '@/services/payment/paymentService';
 import { queryKeys } from '@/hooks/queryKeys';
+import { usePublicSettings } from '@/hooks/settings/usePublicSettings';
 import type { SavedAddress, CreateAddressPayload } from '@/types/user/user.types';
 import type { ValidateCheckoutResponse } from '@/types/order/order.types';
 
@@ -72,6 +73,7 @@ export function useCheckout() {
   const { user, isAuthenticated } = useUserStore();
   const { items: cartItems, summary: cartSummary, clearCart, cartId, syncCartToBackend } = useCart();
   const { showToast } = useToast();
+  const { standardShippingFee, freeShippingThreshold } = usePublicSettings();
 
   // Active step
   const [step, setStep] = useState<CheckoutStep>(1);
@@ -111,6 +113,13 @@ export function useCheckout() {
   // Order processing state
   const [isProcessing, setIsProcessing] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<any>(null);
+
+  // Payment retry & failure lifecycle state
+  const [pendingOrder, setPendingOrder] = useState<any>(null);
+  const [activePaymentId, setActivePaymentId] = useState<string | null>(null);
+  const [paymentFailed, setPaymentFailed] = useState<boolean>(false);
+  const [paymentError, setPaymentError] = useState<string>('');
+  const [isRetryingPayment, setIsRetryingPayment] = useState<boolean>(false);
 
   // Selected address helper
   const selectedAddress = useMemo(() => {
@@ -165,6 +174,10 @@ export function useCheckout() {
   // 2. Pre-checkout validation via POST /api/v1/orders/validate-checkout
   const runValidateCheckout = useCallback(
     async (addressId?: string, coupon?: string) => {
+      if (!cartItems || cartItems.length === 0) {
+        setValidationData(null);
+        return;
+      }
       try {
         setIsValidating(true);
         const isLocalAddr = addressId?.startsWith('addr_');
@@ -210,14 +223,15 @@ export function useCheckout() {
 
   const lastValidatedRef = useRef<string>('');
 
-  // Re-run validation only when step moves to Review or address/coupon changes
+  // Re-run validation on Step 1 (Address) and whenever address, coupon, or cart items change
   useEffect(() => {
-    const key = `${step}_${selectedAddressId}_${appliedCoupon || ''}`;
-    if (step >= 2 && selectedAddressId && lastValidatedRef.current !== key) {
+    if (!cartItems || cartItems.length === 0) return;
+    const key = `${selectedAddressId || 'no_addr'}_${appliedCoupon || ''}_${cartItems.length}`;
+    if (lastValidatedRef.current !== key) {
       lastValidatedRef.current = key;
-      runValidateCheckout(selectedAddressId, appliedCoupon || undefined);
+      runValidateCheckout(selectedAddressId || undefined, appliedCoupon || undefined);
     }
-  }, [step, selectedAddressId, runValidateCheckout, appliedCoupon]);
+  }, [cartItems, selectedAddressId, runValidateCheckout, appliedCoupon]);
 
   // 3. Address handlers
   const handleSelectAddress = (id: string) => {
@@ -307,6 +321,12 @@ export function useCheckout() {
 
   // 5. Final Order Placement & Razorpay Payment Lifecycle
   const handlePlaceOrder = async () => {
+    // Restrict checkout process if cart is empty (Flipkart-style guard)
+    if (!cartItems || cartItems.length === 0) {
+      showToast('Your cart is empty. Please add items before checking out.');
+      return;
+    }
+
     if (!selectedAddressId && addresses.length === 0 && !newAddress.addressLine1) {
       showToast('Please select or add a delivery address');
       setStep(1);
@@ -329,7 +349,7 @@ export function useCheckout() {
         shippingAddressId: (!isLocalAddress && selectedAddressId) ? selectedAddressId : undefined,
         billingAddressId: (!isLocalAddress && selectedAddressId) ? selectedAddressId : undefined,
         shippingAddress: (isLocalAddress || !selectedAddressId) ? (selectedAddress || newAddress) : undefined,
-        paymentMethod: paymentMethod === 'COD' ? 'COD' : 'UPI',
+        paymentMethod: paymentMethod === 'COD' ? 'COD' : 'RAZORPAY',
         couponCode: appliedCoupon || undefined,
         currency: 'INR',
         notes: orderNotes.trim() || undefined,
@@ -355,7 +375,7 @@ export function useCheckout() {
                 id: `ord_${Date.now()}`,
                 orderNumber: `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`,
                 status: paymentMethod === 'COD' ? 'CONFIRMED' : 'PENDING_PAYMENT',
-                paymentMethod: paymentMethod === 'COD' ? 'COD' : 'UPI',
+                paymentMethod: paymentMethod === 'COD' ? 'COD' : 'RAZORPAY',
                 financials: {
                   subtotal: priceDetails.subtotal,
                   discountTotal: priceDetails.discountTotal,
@@ -388,9 +408,17 @@ export function useCheckout() {
       const order = rawData.order || rawData;
       const orderId = order.id || rawData.id || `order_${Date.now()}`;
 
-      // Case 1: Cash on Delivery (COD) -> Order Confirmed immediately
+      // Case 1: Cash on Delivery (COD) -> Order Confirmed immediately with PENDING payment
       if (paymentMethod === 'COD') {
-        setCreatedOrder(order);
+        const codOrder = {
+          ...order,
+          status: 'CONFIRMED',
+          paymentStatus: 'PENDING',
+          paymentMethod: 'COD',
+        };
+        setCreatedOrder(codOrder);
+        setPaymentFailed(false);
+        setPaymentError('');
         setStep(4);
         await clearCart();
         queryClient.invalidateQueries({ queryKey: queryKeys.cart.all });
@@ -419,6 +447,7 @@ export function useCheckout() {
         if (payErr?.response?.status === 401 || !isAuthenticated) {
           initRes = {
             data: {
+              paymentId: `pay_mock_${Date.now()}`,
               providerPaymentId: `order_rzp_${Date.now()}`,
               clientSecret: 'rzp_test_1DP5mmOlF5G5ag',
               amount: priceDetails.grandTotal,
@@ -431,6 +460,10 @@ export function useCheckout() {
       }
 
       const initData = initRes?.data as any;
+      const currentPayId = initData?.paymentId || initData?.id || null;
+      setActivePaymentId(currentPayId);
+      setPendingOrder(order);
+
       const razorpayOrderId =
         initData?.providerPaymentId ||
         initData?.gatewayData?.razorpayOrderId ||
@@ -465,17 +498,24 @@ export function useCheckout() {
         },
         handler: async (response: any) => {
           try {
-            // Verify HMAC signature (POST /api/v1/payments/verify)
+            const verifiedOrderId = response.razorpay_order_id || razorpayOrderId;
+            // Verify HMAC signature (POST /api/v1/payments/verify) with both camelCase & snake_case
             if (isAuthenticated) {
               await paymentService.verifyPayment({
                 orderId: orderId,
+                paymentId: currentPayId || undefined,
+                razorpayOrderId: verifiedOrderId,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                razorpay_order_id: verifiedOrderId,
                 razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
               });
             }
 
             setCreatedOrder({ ...order, status: 'CONFIRMED', paymentStatus: 'PAID' });
+            setPaymentFailed(false);
+            setPaymentError('');
             setStep(4);
             await clearCart();
             queryClient.invalidateQueries({ queryKey: queryKeys.cart.all });
@@ -484,6 +524,8 @@ export function useCheckout() {
           } catch {
             showToast('Order confirmed! Details saved.');
             setCreatedOrder({ ...order, status: 'CONFIRMED', paymentStatus: 'PAID' });
+            setPaymentFailed(false);
+            setPaymentError('');
             setStep(4);
             await clearCart();
           } finally {
@@ -496,13 +538,16 @@ export function useCheckout() {
             try {
               await paymentService.recordFailure({
                 orderId: orderId,
-                failureCode: 'USER_CANCELLED',
-                failureMessage: 'Customer dismissed payment gateway modal',
+                failureCode: 'BAD_REQUEST_ERROR',
+                failureMessage: 'Payment was cancelled by user in UPI app',
+                providerPaymentId: currentPayId || razorpayOrderId,
               });
             } catch {
               // Ignore failure reporting error
             }
-            showToast('Payment was cancelled. You can retry anytime.');
+            setPaymentFailed(true);
+            setPaymentError('Payment Failed. Try Again');
+            showToast('Payment was cancelled or failed. You can retry anytime.', 'error');
             setIsProcessing(false);
           },
         },
@@ -513,6 +558,120 @@ export function useCheckout() {
       const msg = err?.response?.data?.message || err?.message || 'Failed to place order. Please try again.';
       showToast(msg);
       setIsProcessing(false);
+    }
+  };
+
+  // Step 2: Retry Payment (POST /api/v1/payments/retry)
+  const handleRetryPayment = async () => {
+    if (!activePaymentId || !pendingOrder) {
+      return handlePlaceOrder();
+    }
+
+    setIsRetryingPayment(true);
+    try {
+      const isScriptLoaded = await loadRazorpayScript();
+      const RazorpayConstructor = (typeof window !== 'undefined' ? (window as any).Razorpay : null);
+      if (!isScriptLoaded || !RazorpayConstructor) {
+        throw new Error('Razorpay SDK could not be loaded. Please check your network connection.');
+      }
+
+      const retryRes = await paymentService.retryPayment({
+        paymentId: activePaymentId,
+        paymentMethod: 'UPI',
+      });
+
+      const retryData = retryRes?.data as any;
+      const newRazorpayOrderId =
+        retryData?.gatewayData?.razorpayOrderId ||
+        retryData?.providerOrderId ||
+        retryData?.gatewayData?.orderId ||
+        retryData?.paymentId ||
+        `rzp_order_${Date.now()}`;
+
+      const razorpayKey =
+        retryData?.gatewayData?.keyId ||
+        retryData?.gatewayData?.publishableKey ||
+        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+        'rzp_test_1DP5mmOlF5G5ag';
+
+      const razorpayAmount = Math.round(
+        Number(retryData?.amount || pendingOrder?.financials?.grandTotal || priceDetails.grandTotal || 0) * 100
+      );
+
+      const rzp = new RazorpayConstructor({
+        key: razorpayKey,
+        amount: razorpayAmount,
+        currency: retryData?.currency || 'INR',
+        name: 'Meeo Online Store',
+        description: `Order ${pendingOrder.orderNumber || pendingOrder.id}`,
+        order_id: newRazorpayOrderId,
+        prefill: {
+          name: user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : (selectedAddress?.recipientName || newAddress.recipientName || 'Rahul Kumar'),
+          email: user?.email || 'customer@meeo.store',
+          contact: (user as any)?.phone || (user as any)?.phoneNumber || selectedAddress?.phone || newAddress.phone || '9876543210',
+        },
+        theme: {
+          color: '#8C5338',
+        },
+        handler: async (response: any) => {
+          try {
+            const verifiedOrderId = response.razorpay_order_id || newRazorpayOrderId;
+            if (isAuthenticated) {
+              await paymentService.verifyPayment({
+                orderId: pendingOrder.id,
+                paymentId: activePaymentId,
+                razorpayOrderId: verifiedOrderId,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                razorpay_order_id: verifiedOrderId,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+            }
+
+            setCreatedOrder({ ...pendingOrder, status: 'CONFIRMED', paymentStatus: 'PAID' });
+            setPaymentFailed(false);
+            setPaymentError('');
+            setStep(4);
+            await clearCart();
+            queryClient.invalidateQueries({ queryKey: queryKeys.cart.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+            showToast('🎉 Payment verified and order confirmed!');
+          } catch {
+            showToast('Order confirmed! Details saved.');
+            setCreatedOrder({ ...pendingOrder, status: 'CONFIRMED', paymentStatus: 'PAID' });
+            setPaymentFailed(false);
+            setPaymentError('');
+            setStep(4);
+            await clearCart();
+          } finally {
+            setIsRetryingPayment(false);
+          }
+        },
+        modal: {
+          ondismiss: async () => {
+            try {
+              await paymentService.recordFailure({
+                orderId: pendingOrder.id,
+                failureCode: 'BAD_REQUEST_ERROR',
+                failureMessage: 'Payment was cancelled by user in UPI app',
+                providerPaymentId: activePaymentId || newRazorpayOrderId,
+              });
+            } catch {
+              // Ignore failure reporting error
+            }
+            setPaymentFailed(true);
+            setPaymentError('Payment Failed. Try Again');
+            showToast('Payment was cancelled or failed. You can retry anytime.', 'error');
+            setIsRetryingPayment(false);
+          },
+        },
+      });
+
+      rzp.open();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || err?.message || 'Could not retry payment. Please try again.', 'error');
+      setIsRetryingPayment(false);
     }
   };
 
@@ -530,11 +689,12 @@ export function useCheckout() {
       };
     }
 
-    // Fallback to local cart summary
+    // Fallback to local cart summary (before validation returns)
     const subtotal = cartSummary.subtotal;
     const discountTotal = cartSummary.discount;
-    const shippingFee = subtotal > 500 ? 0 : 40;
-    const taxTotal = Math.round(subtotal * 0.05); // 5% GST estimate
+    const shippingFee = subtotal >= freeShippingThreshold ? 0 : standardShippingFee;
+    // Hardcoded 5% tax removed; exact tax arrives synchronously/reactively from validate-checkout API
+    const taxTotal = 0;
     const grandTotal = Math.max(0, subtotal - discountTotal + shippingFee + taxTotal);
 
     return {
@@ -545,7 +705,7 @@ export function useCheckout() {
       grandTotal,
       currency: 'INR',
     };
-  }, [validationData, cartSummary]);
+  }, [validationData, cartSummary, freeShippingThreshold, standardShippingFee]);
 
   return {
     step,
@@ -575,11 +735,19 @@ export function useCheckout() {
     setOrderNotes,
     // Validation & Order placement
     cartItems,
+    isCartEmpty: cartItems.length === 0,
     validationData,
     isValidating,
     isProcessing,
     createdOrder,
+    pendingOrder,
+    paymentFailed,
+    paymentError,
+    isRetryingPayment,
+    handleRetryPayment,
     priceDetails,
+    standardShippingFee,
+    freeShippingThreshold,
     handlePlaceOrder,
   };
 }

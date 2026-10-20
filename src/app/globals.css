@@ -245,7 +245,7 @@ body.dark,
   border-color: var(--border) !important;
 }
 
-/* UrbanNest Warm Palette Dark Mode Mappings */
+/* Meeo Warm Palette Dark Mode Mappings */
 :is(.dark, [data-theme="dark"]) :is(
   .bg-\[\#FAF8F5\],
   [class*="bg-[#FAF8F5]"]
@@ -364,7 +364,7 @@ body.dark,
 }
 
 /* ==========================================================================
-   UrbanNest Premium Footwear & Lifestyle Design System
+   Meeo Premium Footwear & Lifestyle Design System
    ========================================================================== */
 :root {
   --urban-primary: #2D2621;

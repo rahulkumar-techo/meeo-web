@@ -32,32 +32,34 @@ export function useOrderRealtime(
     realtimeSocket.joinOrder(orderId);
 
     const handleOrderEvent = (payload: RealtimeOrderEventPayload) => {
-      if (payload.orderId === orderId) {
-        // Update specific order details in TanStack Query cache
-        queryClient.setQueryData(queryKeys.orders.detail(orderId), (prev: any) => {
-          if (!prev?.data) return prev;
-          return {
-            ...prev,
-            data: {
-              ...prev.data,
-              status: payload.status || prev.data.status,
-              tracking: payload.tracking || prev.data.tracking,
-              statusHistory: payload.note
-                ? [
-                    ...(prev.data.statusHistory || []),
-                    {
-                      status: payload.status,
-                      timestamp: payload.timestamp || new Date().toISOString(),
-                      note: payload.note,
-                    },
-                  ]
-                : prev.data.statusHistory,
-            },
-          };
-        });
+      if (!payload || payload.orderId === orderId || !payload.orderId) {
+        // Invalidate all order queries so active UI refetches immediately
+        queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
 
-        // Invalidate list queries
-        queryClient.invalidateQueries({ queryKey: queryKeys.orders.list() });
+        // Optimistically update specific order details in TanStack Query cache if matching
+        if (orderId && (!payload.orderId || payload.orderId === orderId)) {
+          queryClient.setQueryData(queryKeys.orders.detail(orderId), (prev: any) => {
+            if (!prev?.data) return prev;
+            return {
+              ...prev,
+              data: {
+                ...prev.data,
+                status: payload.status || prev.data.status,
+                tracking: payload.tracking || prev.data.tracking,
+                statusHistory: payload.note
+                  ? [
+                      ...(prev.data.statusHistory || []),
+                      {
+                        status: payload.status,
+                        timestamp: payload.timestamp || new Date().toISOString(),
+                        note: payload.note,
+                      },
+                    ]
+                  : prev.data.statusHistory,
+              },
+            };
+          });
+        }
 
         if (onUpdate) {
           onUpdate(payload);
@@ -70,6 +72,9 @@ export function useOrderRealtime(
     const unsubShipped = realtimeSocket.on('order.shipped', handleOrderEvent);
     const unsubDelivered = realtimeSocket.on('order.delivered', handleOrderEvent);
     const unsubCancelled = realtimeSocket.on('order.cancelled', handleOrderEvent);
+    const unsubUpdated = realtimeSocket.on('order.updated', handleOrderEvent);
+    const unsubStatusChanged = realtimeSocket.on('order_status_changed', handleOrderEvent);
+    const unsubStatus = realtimeSocket.on('order:status', handleOrderEvent);
 
     return () => {
       unsubConfirmed();
@@ -77,6 +82,9 @@ export function useOrderRealtime(
       unsubShipped();
       unsubDelivered();
       unsubCancelled();
+      unsubUpdated();
+      unsubStatusChanged();
+      unsubStatus();
     };
   }, [orderId, token, queryClient, onUpdate]);
 }

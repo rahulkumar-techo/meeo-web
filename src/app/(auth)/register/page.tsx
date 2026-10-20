@@ -63,7 +63,7 @@ function RegisterFormContent() {
     }
 
     if (!agreeTerms) {
-      setErrorMsg('Please agree to the UrbanNest Member Terms to continue');
+      setErrorMsg('Please agree to the Meeo Member Terms to continue');
       return;
     }
 
@@ -105,7 +105,7 @@ function RegisterFormContent() {
       { idToken, deviceName, deviceId },
       {
         onSuccess: (res) => {
-          showToast(`Welcome to UrbanNest, ${res.data?.user?.firstName || 'Member'}!`, 'success');
+          showToast(`Welcome to Meeo, ${res.data?.user?.firstName || 'Member'}!`, 'success');
           router.push(redirectPath);
         },
         onError: (err: any) => {
@@ -122,9 +122,9 @@ function RegisterFormContent() {
       {/* Editorial Visual Showcase on Left */}
       <div className="lg:col-span-6 xl:col-span-6 flex">
         <AuthVisualSide
-          heading="Join the UrbanNest Footwear Collective."
+          heading="Join the Meeo Footwear Collective."
           subheading="Become an exclusive member to unlock member-only archival drops, complimentary sizing exchanges, and personal tier rewards."
-          badge="UrbanNest Membership"
+          badge="Meeo Membership"
         />
       </div>
 
@@ -136,7 +136,7 @@ function RegisterFormContent() {
               href="/"
               className="font-serif text-2xl font-bold tracking-tight text-[#2D2621]"
             >
-              UrbanNest
+              Meeo
             </Link>
             <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D2621] tracking-tight mt-3">
               Create an account<span className="text-[#8C5338]">.</span>
@@ -258,7 +258,7 @@ function RegisterFormContent() {
               disabled={isSubmitting}
               className="w-full h-11.5 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
             >
-              <span>{isSubmitting ? 'Creating Account...' : 'Create UrbanNest Account'}</span>
+              <span>{isSubmitting ? 'Creating Account...' : 'Create Meeo Account'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

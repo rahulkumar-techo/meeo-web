@@ -6,10 +6,11 @@ import { Tag, ArrowRight, ShieldCheck, Truck } from 'lucide-react';
 import { CartSummary } from '@/types/cart';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
+import { usePublicSettings } from '@/hooks/settings/usePublicSettings';
 
 interface CartSummaryCardProps {
   summary: CartSummary;
-  onApplyCoupon: (code: string) => boolean;
+  onApplyCoupon: (code: string) => boolean | Promise<boolean>;
   onRemoveCoupon: () => void;
 }
 
@@ -19,19 +20,20 @@ export const CartSummaryCard: React.FC<CartSummaryCardProps> = ({
   onRemoveCoupon,
 }) => {
   const { showToast } = useToast();
+  const { standardShippingFee, freeShippingThreshold } = usePublicSettings();
   const [couponInput, setCouponInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleApply = (e: React.FormEvent) => {
+  const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponInput.trim()) return;
-    const ok = onApplyCoupon(couponInput);
+    const ok = await onApplyCoupon(couponInput);
     if (ok) {
       showToast(`Promo ${couponInput.toUpperCase()} successfully applied!`);
       setCouponInput('');
       setErrorMsg('');
     } else {
-      setErrorMsg('Invalid promotional code. Try STUDIO1000');
+      setErrorMsg('Invalid or expired coupon code');
     }
   };
 
@@ -41,22 +43,22 @@ export const CartSummaryCard: React.FC<CartSummaryCardProps> = ({
         Order Summary
       </h3>
 
-      {/* Free Shipping Progress Indicator */}
+      {/* Free Delivery Banner */}
       <div className="p-3.5 rounded-2xl bg-[#eaedff]/60 border border-[#dae2fd]">
         <div className="flex items-center justify-between text-xs font-semibold text-[#131b2e] mb-1.5">
           <span>
-            {summary.isFreeShippingUnlocked ? (
-              <span className="text-[#412ce7] font-bold">✓ Free Express Priority Unlocked</span>
+            {summary.subtotal >= freeShippingThreshold ? (
+              <span className="text-[#412ce7] font-bold">✓ Free Delivery Unlocked</span>
             ) : (
-              <>Add ₹{summary.amountNeededForFreeShipping.toLocaleString('en-IN')} for Free Express</>
+              <>Add ₹{(freeShippingThreshold - summary.subtotal).toLocaleString('en-IN')} more to get FREE Delivery!</>
             )}
           </span>
-          <span>{Math.min(100, Math.round((summary.subtotal / 5000) * 100))}%</span>
+          <span>{Math.min(100, Math.round((summary.subtotal / freeShippingThreshold) * 100))}%</span>
         </div>
         <div className="w-full h-2 bg-white rounded-full overflow-hidden">
           <div
             className="h-full bg-[#412ce7] rounded-full transition-all duration-500"
-            style={{ width: `${Math.min(100, (summary.subtotal / 5000) * 100)}%` }}
+            style={{ width: `${Math.min(100, (summary.subtotal / freeShippingThreshold) * 100)}%` }}
           />
         </div>
       </div>
@@ -81,9 +83,13 @@ export const CartSummaryCard: React.FC<CartSummaryCardProps> = ({
         )}
 
         <div className="flex items-center justify-between text-[#464556]">
-          <span>Air Priority Courier</span>
+          <span>Delivery Fee</span>
           <span className="font-semibold text-[#131b2e]">
-            {summary.shipping === 0 ? <span className="text-green-600 font-bold">FREE</span> : `₹${summary.shipping}`}
+            {summary.subtotal >= freeShippingThreshold || summary.shipping === 0 ? (
+              <span className="text-green-600 font-bold">FREE</span>
+            ) : (
+              `₹${standardShippingFee}`
+            )}
           </span>
         </div>
 

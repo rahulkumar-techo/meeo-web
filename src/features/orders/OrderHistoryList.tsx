@@ -28,7 +28,7 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ orders }) =>
     <div className="flex flex-col gap-6">
       {orders.map((order) => {
         const orderNum = order.orderNumber || order.id;
-        const total = order.totalAmount || order.summary?.total || 0;
+        const total = (order as any).financials?.grandTotal ?? order.totalAmount ?? order.grandTotal ?? order.summary?.total ?? 0;
         const status = order.status || 'CONFIRMED';
         const isOut = status === 'out_for_delivery' || status === 'SHIPPED';
         const itemsPreview = order.itemsPreview || (order.items ? order.items.map((i: any) => ({

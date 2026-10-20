@@ -39,7 +39,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Auth Legal & Micro Footer */}
       <div className="max-w-6xl mx-auto w-full pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-[#786C64] border-t border-[#E8E2DA] mt-6">
         <div className="flex items-center gap-2">
-          <span>© {new Date().getFullYear()} UrbanNest Footwear & Lifestyle Inc.</span>
+          <span>© {new Date().getFullYear()} Meeo E-Commerce Inc.</span>
           <span>·</span>
           <span>Member ID Gateway</span>
         </div>

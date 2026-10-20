@@ -50,7 +50,8 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({ product }) => {
       return;
     }
     const variantTitle = currentVariant?.title || currentVariant?.sku;
-    await addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
+    const activeVarId = selectedVariantId || currentVariant?.id;
+    await addToCart(product, quantity, selectedColor || variantTitle, selectedSize, activeVarId);
     showToast(`Added ${quantity}x ${product.name} to bag`);
   };
 
@@ -62,7 +63,8 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({ product }) => {
       return;
     }
     const variantTitle = currentVariant?.title || currentVariant?.sku;
-    await addToCart(product, quantity, selectedColor || variantTitle, selectedSize);
+    const activeVarId = selectedVariantId || currentVariant?.id;
+    await addToCart(product, quantity, selectedColor || variantTitle, selectedSize, activeVarId);
     router.push(AppRoute.CHECKOUT);
   };
 

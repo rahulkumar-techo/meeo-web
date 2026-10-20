@@ -12,6 +12,7 @@ import type {
   PaymentDetails,
   RetryPaymentPayload,
   RetryPaymentResponse,
+  VerifyPaymentPayload,
 } from '@/types/payment/payment.types';
 
 export const paymentService = {
@@ -31,14 +32,7 @@ export const paymentService = {
   /**
    * Verify payment signature / transaction status.
    */
-  async verifyPayment(payload: {
-    paymentId?: string;
-    orderId?: string;
-    razorpay_payment_id?: string;
-    razorpay_order_id?: string;
-    razorpay_signature?: string;
-    provider?: string;
-  }): Promise<ApiResponse<any>> {
+  async verifyPayment(payload: VerifyPaymentPayload): Promise<ApiResponse<any>> {
     const response = await apiClient.post<ApiResponse<any>>(
       ApiRoute.PAYMENTS.VERIFY,
       payload
@@ -63,6 +57,7 @@ export const paymentService = {
     orderId: string;
     failureCode?: string;
     failureMessage?: string;
+    providerPaymentId?: string;
   }): Promise<ApiResponse<any>> {
     const response = await apiClient.post<ApiResponse<any>>(
       ApiRoute.PAYMENTS.FAIL,

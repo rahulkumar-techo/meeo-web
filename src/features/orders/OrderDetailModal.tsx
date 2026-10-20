@@ -22,6 +22,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { useOrderByIdQuery, useCancelOrderMutation } from '@/hooks/order/useOrder';
+import { useOrderRealtime } from '@/hooks/order/useOrderRealtime';
 import { AppRoute } from '@/routes';
 import type { OrderStatus } from '@/types/order/order.types';
 
@@ -31,6 +32,31 @@ interface OrderDetailModalProps {
   onClose: () => void;
 }
 
+function OrderItemModalImage({ src, alt }: { src?: string | null; alt: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className="relative w-14 h-14 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] flex items-center justify-center text-[#A09383] shrink-0">
+        <Package className="w-5 h-5 stroke-[1.5]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-14 h-14 rounded-xl bg-white border border-[#E8E2DA] overflow-hidden p-1 shrink-0">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="56px"
+        className="object-contain p-1"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+}
+
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   orderId,
   isOpen,
@@ -38,6 +64,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 }) => {
   const { data, isLoading, error } = useOrderByIdQuery(orderId);
   const cancelMutation = useCancelOrderMutation();
+
+  // Real-time WebSocket hook for instant order updates
+  useOrderRealtime(orderId);
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelReason, setCancelReason] = useState('Customer requested cancellation before shipment');
@@ -103,7 +132,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
   const badge = getStatusBadge(order?.status);
   const StatusIcon = badge.icon;
-  const currencySymbol = order?.currency === 'USD' ? '$' : '₹';
+  const currencySymbol = (order?.financials?.currency || order?.currency) === 'USD' ? '$' : '₹';
+  const subtotal = order?.financials?.subtotal ?? order?.subtotal ?? 0;
+  const discountTotal = order?.financials?.discountTotal ?? order?.discountTotal ?? order?.discountAmount ?? 0;
+  const shippingTotal = order?.financials?.shippingTotal ?? order?.shippingTotal ?? order?.shippingFee ?? 0;
+  const taxTotal = order?.financials?.taxTotal ?? order?.taxTotal ?? order?.taxAmount ?? 0;
+  const grandTotal = order?.financials?.grandTotal ?? order?.grandTotal ?? order?.totalAmount ?? 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
@@ -169,8 +203,21 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <span>{order.status}</span>
                   </span>
                   {order.paymentStatus && (
-                    <span className="text-[11px] font-semibold text-[#786C64] px-2 py-0.5 rounded-md bg-white border border-[#E8E2DA]">
-                      Payment: {order.paymentStatus}
+                    <span
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                        order.paymentStatus === 'PAID' || order.status === 'DELIVERED'
+                          ? 'bg-emerald-50 text-[#2E6F40] border-emerald-200 font-bold'
+                          : order.paymentMethod === 'COD'
+                          ? 'bg-amber-50 text-amber-900 border-amber-200 font-bold'
+                          : 'bg-white text-[#786C64] border-[#E8E2DA]'
+                      }`}
+                    >
+                      Payment:{' '}
+                      {order.status === 'DELIVERED' || order.paymentStatus === 'PAID'
+                        ? 'Paid'
+                        : order.paymentMethod === 'COD'
+                        ? 'To be collected on delivery'
+                        : order.paymentStatus}
                     </span>
                   )}
                 </div>
@@ -248,35 +295,34 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       item.thumbnailUrl ||
                       item.image ||
                       item.imageUrl ||
-                      '/assets/urbannest/trending-nike-af1.jpg';
+                      item.variantSnapshot?.thumbnail ||
+                      null;
                     const itemName =
                       item.productName || item.title || item.name || 'Product Item';
                     const itemQty = Number(item.quantity ?? item.qty ?? 1);
                     const itemPrice = Number(item.unitPrice ?? item.price ?? 0);
-                    const itemTotal = Number(item.totalPrice ?? itemPrice * itemQty);
+                    const itemTotal = Number(item.total ?? item.totalPrice ?? itemPrice * itemQty);
+                    const variantAttributes = Array.isArray(item.variantSnapshot?.attributes)
+                      ? item.variantSnapshot.attributes
+                          .map((a: any) => `${a.attribute ? `${a.attribute}: ` : ''}${a.value}`)
+                          .join(', ')
+                      : item.variantTitle || '';
 
                     return (
                       <div key={item.id} className="p-3.5 sm:p-4 flex items-center gap-4 text-xs">
-                        <div className="relative w-14 h-14 rounded-xl bg-[#FAF8F5] border border-[#E8E2DA] overflow-hidden p-1 shrink-0">
-                          <Image
-                            src={itemImg}
-                            alt={itemName}
-                            fill
-                            sizes="56px"
-                            className="object-contain p-1"
-                            onError={(e: any) => {
-                              e.target.src = '/assets/urbannest/trending-nike-af1.jpg';
-                            }}
-                          />
-                        </div>
+                        <OrderItemModalImage src={itemImg} alt={itemName} />
 
                         <div className="flex-1 min-w-0">
                           <div className="font-bold text-[#2D2621] truncate">
                             {itemName}
                           </div>
-                          <div className="text-[11px] text-[#786C64] mt-0.5 space-x-2">
+                          <div className="text-[11px] text-[#786C64] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             {item.sku && <span>SKU: {item.sku}</span>}
-                            {item.variantTitle && <span>• {item.variantTitle}</span>}
+                            {variantAttributes && (
+                              <span className="inline-block bg-[#F3EFEA] text-[#786C64] px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                {variantAttributes}
+                              </span>
+                            )}
                             <span>• Qty: {itemQty} × {currencySymbol}{itemPrice.toLocaleString()}</span>
                           </div>
                         </div>
@@ -338,16 +384,16 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <span>Items Subtotal</span>
                     <span>
                       {currencySymbol}
-                      {(order.subtotal || 0).toLocaleString()}
+                      {subtotal.toLocaleString('en-IN')}
                     </span>
                   </div>
 
-                  {(order.discountTotal || order.discountAmount) ? (
+                  {discountTotal > 0 ? (
                     <div className="flex justify-between text-emerald-600 font-semibold">
                       <span>Discount Savings</span>
                       <span>
                         -{currencySymbol}
-                        {(order.discountTotal || order.discountAmount || 0).toLocaleString()}
+                        {discountTotal.toLocaleString('en-IN')}
                       </span>
                     </div>
                   ) : null}
@@ -355,9 +401,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   <div className="flex justify-between text-[#786C64]">
                     <span>Shipping Total</span>
                     <span>
-                      {(order.shippingTotal || order.shippingFee || 0) === 0
+                      {shippingTotal === 0
                         ? 'FREE'
-                        : `${currencySymbol}${(order.shippingTotal || order.shippingFee || 0).toLocaleString()}`}
+                        : `${currencySymbol}${shippingTotal.toLocaleString('en-IN')}`}
                     </span>
                   </div>
 
@@ -365,7 +411,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <span>Sales Taxes</span>
                     <span>
                       {currencySymbol}
-                      {(order.taxTotal || order.taxAmount || 0).toLocaleString()}
+                      {taxTotal.toLocaleString('en-IN')}
                     </span>
                   </div>
 
@@ -373,7 +419,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <span>Grand Total</span>
                     <span>
                       {currencySymbol}
-                      {(order.grandTotal || order.totalAmount || 0).toLocaleString()}
+                      {grandTotal.toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>

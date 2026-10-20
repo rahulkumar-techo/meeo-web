@@ -1,33 +1,33 @@
 import React from 'react';
-import { UrbanNestHero } from '@/components/urbannest/UrbanNestHero';
-import { UrbanNestBenefits } from '@/components/urbannest/UrbanNestBenefits';
-import { UrbanNestCategories } from '@/components/urbannest/UrbanNestCategories';
-import { UrbanNestTrending } from '@/components/urbannest/UrbanNestTrending';
-import { UrbanNestPromoBanner } from '@/components/urbannest/UrbanNestPromoBanner';
+import { MeeoHero } from '@/components/meeo/MeeoHero';
+import { MeeoBenefits } from '@/components/meeo/MeeoBenefits';
+import { MeeoCategories } from '@/components/meeo/MeeoCategories';
+import { MeeoTrending } from '@/components/meeo/MeeoTrending';
+import { MeeoPromoBanner } from '@/components/meeo/MeeoPromoBanner';
 
 export const metadata = {
-  title: 'UrbanNest · Modern Lifestyle, Apparel & Curated Essentials',
+  title: 'Meeo E-Commerce · Modern Lifestyle, Apparel & Curated Essentials',
   description:
-    'Discover UrbanNest: Curated collections of premium apparel, modern lifestyle goods, electronics, and home essentials. Explore our new collection and exclusive deals.',
+    'Discover Meeo E-Commerce: Curated collections of premium apparel, modern lifestyle goods, electronics, and home essentials. Explore our new collection and exclusive deals.',
 };
 
 export default function HomePage() {
   return (
     <div className="flex flex-col w-full min-h-screen bg-[#FAF8F5]">
       {/* Editorial Hero Section with 3D / Photorealistic Staging */}
-      <UrbanNestHero />
+      <MeeoHero />
 
       {/* Service Trust Badges & Benefits */}
-      <UrbanNestBenefits />
+      <MeeoBenefits />
 
       {/* Image-led Category Showcase */}
-      <UrbanNestCategories />
+      <MeeoCategories />
 
       {/* Four-Column Trending Products Grid */}
-      <UrbanNestTrending />
+      <MeeoTrending />
 
       {/* Cinematic Promotional Sale Banner */}
-      <UrbanNestPromoBanner />
+      <MeeoPromoBanner />
     </div>
   );
 }

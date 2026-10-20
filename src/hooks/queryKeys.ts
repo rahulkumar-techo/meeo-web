@@ -106,4 +106,11 @@ export const queryKeys = {
       [...queryKeys.reviews.all, 'summary', productId] as const,
     myReviews: () => [...queryKeys.reviews.all, 'my-reviews'] as const,
   },
+
+  // Public Settings
+  settings: {
+    all: ['settings'] as const,
+    public: () => [...queryKeys.settings.all, 'public'] as const,
+  },
 };
+

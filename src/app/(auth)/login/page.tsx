@@ -62,8 +62,8 @@ function LoginFormContent() {
   };
 
   const handleAutoFillDemo = () => {
-    setIdentifier('rahul.kumar@urbannest.com');
-    setPassword('UrbanNest2026!');
+    setIdentifier('rahul.kumar@meeo.com');
+    setPassword('Meeo2026!');
     setErrorMsg('');
     showToast('Demo member credentials populated');
   };
@@ -134,7 +134,7 @@ function LoginFormContent() {
         <AuthVisualSide
           heading="Every Step Begins With Exclusive Access."
           subheading="Sign in to unlock curated footwear drops, private archive pricing, order tracking, and priority white-glove delivery."
-          badge="UrbanNest Member Access"
+          badge="Meeo Member Access"
         />
       </div>
 
@@ -148,7 +148,7 @@ function LoginFormContent() {
                 href="/"
                 className="font-serif text-2xl font-bold tracking-tight text-[#2D2621]"
               >
-                UrbanNest
+                Meeo
               </Link>
               <button
                 type="button"
@@ -280,7 +280,7 @@ function LoginFormContent() {
                 disabled={isSubmitting}
                 className="w-full h-11.5 rounded-full bg-[#8C5338] hover:bg-[#72422C] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
               >
-                <span>{isSubmitting ? 'Authenticating...' : 'Sign In to UrbanNest'}</span>
+                <span>{isSubmitting ? 'Authenticating...' : 'Sign In to Meeo'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -326,7 +326,7 @@ function LoginFormContent() {
 
           {/* Bottom Switch to Register */}
           <div className="pt-6 mt-6 border-t border-[#E8E2DA] text-center text-xs text-[#786C64]">
-            <span>New to UrbanNest? </span>
+            <span>New to Meeo? </span>
             <Link
               href={`/register?redirect=${encodeURIComponent(redirectPath)}`}
               className="font-bold text-[#8C5338] hover:underline"

@@ -57,8 +57,8 @@ export default function ForgotPasswordPage() {
       <div className="lg:col-span-6 xl:col-span-6 flex">
         <AuthVisualSide
           heading="Secure Account Access Recovery."
-          subheading="Follow the verified verification steps to reset your UrbanNest account credentials and resume exploring curated drops."
-          badge="UrbanNest Security"
+          subheading="Follow the verified verification steps to reset your Meeo account credentials and resume exploring curated drops."
+          badge="Meeo Security"
         />
       </div>
 
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
               href="/"
               className="font-serif text-2xl font-bold tracking-tight text-[#2D2621]"
             >
-              UrbanNest
+              Meeo
             </Link>
             <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D2621] tracking-tight mt-3">
               Reset password<span className="text-[#8C5338]">.</span>

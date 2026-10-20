@@ -86,7 +86,7 @@ export interface PlaceOrderPayload {
   shippingAddress?: Partial<SavedAddress>;
   billingAddressId?: string;
   billingAddress?: Partial<SavedAddress>;
-  paymentMethod?: 'UPI' | 'COD' | 'CARD' | 'NETBANKING' | string;
+  paymentMethod?: 'RAZORPAY' | 'COD' | 'UPI' | 'CARD' | 'NETBANKING' | string;
   couponCode?: string;
   notes?: string;
   currency?: string;
@@ -134,23 +134,35 @@ export interface OrderTrackingInfo {
   shippedAt?: string | null;
 }
 
+export interface OrderFinancials {
+  currency?: string;
+  subtotal?: number;
+  discountTotal?: number;
+  taxTotal?: number;
+  shippingTotal?: number;
+  grandTotal?: number;
+}
+
 export interface OrderDetails {
   id: string;
   orderNumber: string;
   userId?: string;
   status: OrderStatus;
   paymentStatus?: PaymentStatus;
+  paymentMethod?: string;
   currency: string;
-  subtotal: number;
+  financials?: OrderFinancials;
+  subtotal?: number;
   discountTotal?: number;
   discountAmount?: number;
   shippingTotal?: number;
   shippingFee?: number;
   taxTotal?: number;
   taxAmount?: number;
-  grandTotal: number;
+  grandTotal?: number;
   totalAmount?: number;
   createdAt: string;
+  updatedAt?: string;
   expiresAt?: string;
   address?: OrderAddress;
   shippingAddress?: OrderAddress | SavedAddress;
@@ -228,10 +240,13 @@ export interface OrderListItem {
   itemCount?: number;
   totalUnits?: number;
   createdAt: string;
+  updatedAt?: string;
   itemsPreview?: OrderItemPreview[];
   items?: OrderItemSnapshot[];
   shippingAddress?: OrderAddress | Partial<SavedAddress>;
   address?: OrderAddress;
+  statusHistory?: OrderStatusHistoryItem[];
+  financials?: OrderFinancials;
   tracking?: OrderTrackingInfo;
 }
 

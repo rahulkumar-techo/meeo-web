@@ -33,7 +33,7 @@ export const CheckoutOrderReview: React.FC<CheckoutOrderReviewProps> = ({
                 (Array.isArray(item.product?.images) && item.product.images[0]) ||
                 (item.product as any)?.image ||
                 (item.product as any)?.thumbnail ||
-                '/assets/urbannest/trending-nike-af1.jpg'
+                '/assets/meeo-icon.svg'
               }
               alt={item.product?.name || 'Product'}
               className="w-12 h-12 rounded-xl object-cover bg-[#f2f3ff] border border-[#e2e7ff] shrink-0"

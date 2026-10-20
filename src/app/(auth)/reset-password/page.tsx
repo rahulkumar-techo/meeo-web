@@ -13,8 +13,8 @@ function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const destination = searchParams.get('dest') || 'rahul.kumar@urbannest.com';
-  const otp = searchParams.get('otp') || '1234';
+  const destination = searchParams.get('dest') || searchParams.get('email') || '';
+  const otp = searchParams.get('otp') || '';
 
   const { showToast } = useToast();
   const resetPasswordMutation = useResetPasswordMutation();
@@ -28,6 +28,11 @@ function ResetPasswordContent() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!destination.trim() || !otp.trim()) {
+      setErrorMsg('Missing verification context. Please request a new recovery code.');
+      return;
+    }
 
     if (!password || password.length < 6) {
       setErrorMsg('Password must be at least 6 characters long');
@@ -70,7 +75,7 @@ function ResetPasswordContent() {
         <AuthVisualSide
           heading="Secure Password Configuration."
           subheading="Choose a strong security key to safeguard your order history, shipping addresses, and member privileges."
-          badge="UrbanNest Security"
+          badge="Meeo Security"
         />
       </div>
 
@@ -81,13 +86,13 @@ function ResetPasswordContent() {
               href="/"
               className="font-serif text-2xl font-bold tracking-tight text-[#2D2621]"
             >
-              UrbanNest
+              Meeo
             </Link>
             <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D2621] tracking-tight mt-3">
               Set new password<span className="text-[#8C5338]">.</span>
             </h1>
             <p className="text-xs sm:text-sm text-[#786C64]">
-              Configure a new password for account {destination}.
+              Configure a new password for {destination ? `account ${destination}` : 'your account'}.
             </p>
           </div>
 
